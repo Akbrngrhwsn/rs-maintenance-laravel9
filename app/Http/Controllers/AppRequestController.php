@@ -374,11 +374,18 @@ class AppRequestController extends Controller
         }
 
         if($tab === 'history') {
-            $query->whereIn('status', ['submitted_to_bendahara', 'submitted_to_director', 'approved_by_director', 'rejected']);
-        } else {
-            // Pending for 
-            $query->where('status', 'submitted_to_kepala_ruang');
-        }
+    // Tambahkan ' ke dalam array
+    $query->whereIn('status', [
+        'submitted_to_management', // <--- Tambahkan ini
+        'submitted_to_bendahara', 
+        'submitted_to_director', 
+        'approved_by_director', 
+        'rejected'
+    ]);
+} else {
+    // Pending tetap sama karena ini tahap awal Kepala Ruang
+    $query->where('status', 'submitted_to_kepala_ruang');
+}
 
         if ($request->filled('date')) {
             $query->whereDate('created_at', $request->date);
@@ -445,10 +452,10 @@ class AppRequestController extends Controller
             abort(403, 'Anda tidak berwenang memproses pengadaan untuk ruangan ini.');
         }
 
-        $proc->status = 'submitted_to_bendahara';
+        $proc->status = 'submitted_to_management';
         $proc->save();
 
-        return back()->with('success', 'Pengadaan berhasil diteruskan ke Bendahara.');
+        return back()->with('success', 'Pengadaan berhasil diteruskan ke Management.');
     }
 
     public function kepalaRuangRejectProcurement(Request $request, $id)
@@ -469,6 +476,106 @@ class AppRequestController extends Controller
 
         return back()->with('success', 'Pengadaan berhasil ditolak oleh kepala ruang.');
     }
+
+    // Management: Lihat daftar pengadaan yang diajukan oleh Kepala Ruang
+public function managementProcurements(Request $request)
+{
+    if(Auth::user()->role !== 'management') abort(403);
+
+    $tab = $request->get('tab', 'pending'); // 'pending' or 'history'
+    $query = Procurement::with('report');
+
+    if($tab === 'history') {
+        // History: Sudah disetujui management (lanjut ke bendahara/direktur) atau ditolak
+        $query->whereIn('status', ['submitted_to_bendahara', 'submitted_to_director', 'approved_by_director', 'rejected']);
+    } else {
+        // Pending: Menunggu persetujuan Management
+        $query->where('status', 'submitted_to_management');
+    }
+
+    // Filter Tanggal
+    if ($request->filled('date')) {
+        $query->whereDate('created_at', $request->date);
+    } else {
+        if ($request->filled('start_date')) {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
+    }
+
+    // Filter Pencarian
+    if ($request->filled('search')) {
+        $term = $request->search;
+        $query->where(function($q) use ($term) {
+            $q->where('items', 'LIKE', "%{$term}%")
+              ->orWhereHas('report', function($r) use ($term) {
+                  $r->where('ticket_number', 'LIKE', "%{$term}%")
+                    ->orWhere('ruangan', 'LIKE', "%{$term}%");
+              });
+        });
+    }
+
+    $procurements = $query->latest()->get();
+
+    return view('management.procurements', compact('procurements', 'tab'));
+}
+
+// Management: ACC sebuah pengadaan (teruskan ke Bendahara)
+public function managementApproveProcurement($id)
+{
+    if(Auth::user()->role !== 'management') abort(403);
+
+    $proc = Procurement::findOrFail($id);
+    $proc->status = 'submitted_to_bendahara';
+    $proc->save();
+
+    return back()->with('success', 'Pengadaan disetujui oleh Management dan diteruskan ke Bendahara.');
+}
+
+// Management: Reject sebuah pengadaan
+public function managementRejectProcurement(Request $request, $id)
+{
+    if(Auth::user()->role !== 'management') abort(403);
+
+    $proc = Procurement::findOrFail($id);
+    $proc->status = 'rejected';
+    $proc->director_note = $request->catatan ?? null; // Menggunakan kolom yang sama untuk alasan penolakan
+    $proc->save();
+
+    return back()->with('success', 'Pengadaan berhasil ditolak oleh Management.');
+}
+
+// Management: Lihat daftar laporan kerusakan (sama dengan bendaharaReports)
+public function managementReports(Request $request)
+{
+    if(Auth::user()->role !== 'management') abort(403);
+
+    // Laporan Aktif (Pending & Proses)
+    $activeReports = Report::whereIn('status', ['Belum Diproses', 'Diproses'])
+        ->orderByRaw("CASE WHEN status = 'Belum Diproses' THEN 1 ELSE 2 END")
+        ->orderBy('urgency', 'desc')
+        ->orderBy('created_at', 'asc')
+        ->paginate(10, ['*'], 'active_page');
+
+    // Laporan Riwayat
+    $historyQuery = Report::whereIn('status', ['Selesai', 'Tidak Selesai', 'Ditolak']);
+    if ($request->filled('date')) {
+        $historyQuery->whereDate('created_at', $request->date);
+    }
+    if ($request->filled('search')) {
+        $term = $request->search;
+        $historyQuery->where(function($q) use ($term) {
+            $q->where('ticket_number', 'LIKE', "%{$term}%")
+            ->orWhere('ruangan', 'LIKE', "%{$term}%");
+        });
+    }
+
+    $historyReports = $historyQuery->latest()->paginate(10, ['*'], 'history_page');
+
+    return view('management.reports', compact('activeReports', 'historyReports'));
+}
 
     // Bendahara: ACC sebuah pengadaan (teruskan ke Direktur)
     public function bendaharaApproveProcurement($id)

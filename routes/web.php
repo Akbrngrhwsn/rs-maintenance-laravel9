@@ -23,7 +23,12 @@ Route::middleware('auth')->group(function () {
 
     // --- FITUR UMUM (Notifikasi & Profile) ---
     Route::get('/notifications/check', [NotificationController::class, 'check'])->name('notifications.check');
-    
+
+    Route::get('/management/procurements', [AppRequestController::class, 'managementProcurements'])->name('management.procurements');
+    Route::patch('/management/procurements/{id}/approve', [AppRequestController::class, 'managementApproveProcurement'])->name('management.procurements.approve');
+    Route::patch('/management/procurements/{id}/reject', [AppRequestController::class, 'managementRejectProcurement'])->name('management.procurements.reject');
+    Route::get('/management/reports', [AppRequestController::class, 'managementReports'])->name('management.reports');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

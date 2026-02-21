@@ -15,6 +15,12 @@ class Report extends Model
         'urgency', 'urgency_reason', 'status', 'tindakan_teknisi', 'room_id',
     ];
 
+    // Relasi ke User (Pelapor)
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
     // Relasi ke tabel Procurement
     public function procurement()
     {

@@ -43,7 +43,7 @@ class User extends Authenticatable
      */
     public function room()
     {
-        // Ubah 'manager_id' menjadi 'kepala_ruang_id'
+        // Ubah 'manaid' menjadi 'kepala_ruang_id'
         return $this->hasOne(Room::class, 'kepala_ruang_id');
     }
 }

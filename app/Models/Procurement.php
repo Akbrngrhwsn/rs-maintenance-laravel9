@@ -23,8 +23,9 @@ class Procurement extends Model
     {
         $map = [
             'submitted_to_kepala_ruang' => 'Menunggu Konfirmasi Kepala Ruang',
+            'submitted_to_management'   => 'Menunggu Konfirmasi Management',
             'submitted_to_bendahara' => 'Menunggu Konfirmasi Bendahara',
-            'submitted_to_director' => 'Menunggu ACC',
+            'submitted_to_director' => 'Menunggu ACC Direktur',
             'approved_by_director' => 'Disetujui',
             'rejected' => 'Ditolak',
             'draft' => 'Draft',

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <title>Laporan Pengadaan #{{ $procurement->id }}</title>
     <style>
-        body { font-family: sans-serif; font-size:12px; }
+        body { font-family: sans-serif; font-size:11px; color: #333; }
         table { width:100%; border-collapse: collapse; }
         th, td { border:1px solid #333; padding:6px; }
         th { background:#f0f0f0; text-align: left; }
@@ -18,13 +18,18 @@
         .text-gray { color: #757575; }
         .italic { font-style: italic; }
 
-        /* Status Box jika belum valid */
+        /* Status Box untuk Tanda Tangan */
         .status-box {
-            height: 70px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding-top: 25px; /* Manual vertikal align untuk DomPDF */
+            height: 65px;
+            display: table-cell;
+            vertical-align: middle;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .qr-img {
+            width: 65px;
+            height: 65px;
         }
     </style>
 </head>
@@ -35,7 +40,7 @@
             $kopFile = public_path('images/KOPSurat.jfif');
         @endphp
         @if(file_exists($kopFile))
-            <img src="{{ $kopFile }}" alt="Kop Surat" style="width:100%; max-height:120px; object-fit:contain;" />
+            <img src="{{ $kopFile }}" alt="Kop Surat" style="width:100%; max-height:110px; object-fit:contain;" />
         @else
             <div style="font-size:16px; font-weight:bold;">{{ config('app.name', 'RS Maintenance') }}</div>
             <div style="font-size:12px;">Laporan Pengadaan Barang & Jasa</div>
@@ -51,20 +56,19 @@
                 <div style="margin-top:5px;">Tanggal Pengajuan: {{ $procurement->created_at->format('d/m/Y') }}</div>
             </td>
             <td style="border:none; width:40%; text-align:right;">
-                <div style="font-weight:bold; font-size:14px; padding:5px; border:1px solid #333; display:inline-block;">
-                    STATUS: {{ strtoupper($procurement->status) }}
+                <div style="font-weight:bold; font-size:12px; padding:5px; border:1px solid #333; display:inline-block;">
+                    STATUS: {{ strtoupper(str_replace('_', ' ', $procurement->status)) }}
                 </div>
             </td>
         </tr>
     </table>
 
     {{-- INFO RELASI --}}
-    <div style="margin-bottom: 10px; background: #f9f9f9; padding: 10px; border: 1px solid #ddd;">
-        <strong>Informasi Referensi:</strong>
-        <br>
+    <div style="margin-bottom: 15px; background: #f9f9f9; padding: 10px; border: 1px solid #ddd;">
+        <strong>Informasi Referensi:</strong><br>
         @if($procurement->report)
             Nomor Tiket Laporan: <strong>{{ $procurement->report->ticket_number ?? '-' }}</strong> | 
-            Ruangan: <strong>{{ $procurement->report->ruangan ?? '-' }}</strong>
+            Ruangan: <strong>{{ $procurement->report->room->name ?? $procurement->report->ruangan ?? '-' }}</strong>
         @else
             <em>(Pengadaan langsung tanpa referensi tiket laporan)</em>
         @endif
@@ -75,7 +79,7 @@
     <table>
         <thead>
             <tr>
-                <th width="5%">No</th>
+                <th width="5%" class="text-center">No</th>
                 <th width="30%">Nama Barang</th>
                 <th width="20%">Merk / Spesifikasi</th>
                 <th width="10%" class="text-center">Jml</th>
@@ -90,7 +94,6 @@
             @endphp
             @forelse($items as $index => $it)
                 @php
-                    // Normalisasi data (handle perbedaan nama key)
                     $qty = isset($it['quantity']) ? (int)$it['quantity'] : (isset($it['jumlah']) ? (int)$it['jumlah'] : 1);
                     $price = isset($it['unit_price']) ? (float)$it['unit_price'] : (isset($it['harga_satuan']) ? (float)$it['harga_satuan'] : 0);
                     $name = $it['name'] ?? $it['nama'] ?? '-';
@@ -121,98 +124,114 @@
         </tfoot>
     </table>
 
-    {{-- CATATAN --}}
-    @if($procurement->director_note)
+    {{-- CATATAN DIREKTUR/MANAGEMENT --}}
+    @if($procurement->director_note || $procurement->management_note)
         <div style="margin-top: 15px;">
-            <strong>Catatan Direktur:</strong>
-            <div style="border:1px dashed #555; padding:8px; margin-top:5px; background: #fffbe6;">
-                {{ $procurement->director_note }}
-            </div>
+            @if($procurement->management_note)
+                <strong>Catatan Management:</strong>
+                <div style="border:1px dashed #555; padding:8px; margin-bottom:5px; background: #f0f7ff;">
+                    {{ $procurement->management_note }}
+                </div>
+            @endif
+            @if($procurement->director_note)
+                <strong>Catatan Direktur:</strong>
+                <div style="border:1px dashed #555; padding:8px; background: #fffbe6;">
+                    {{ $procurement->director_note }}
+                </div>
+            @endif
         </div>
     @endif
 
-    {{-- AREA TANDA TANGAN --}}
-    <br><br>
-    <table style="border: none; margin-top: 20px;">
-        <tr style="border: none;">
-            
-            {{-- 1. ADMIN IT (Selalu Muncul) --}}
-            <td width="25%" class="text-center" style="border: none; vertical-align: top;">
-                <p class="text-bold" style="margin-bottom: 5px;">Diajukan Oleh</p>
-                @if(isset($qrAdmin) && $qrAdmin)
-                    <img src="data:image/png;base64, {{ $qrAdmin }}" alt="QR Admin" style="width: 70px; height: 70px;">
-                    <br>
-                    <span style="font-size: 9pt;">Admin IT</span><br>
-                    <span style="font-size: 8pt;" class="text-green">(Diajukan)</span>
-                @endif
-            </td>
+    {{-- AREA TANDA TANGAN (5 KOLOM) --}}
+    <div style="margin-top: 30px;">
+        <table style="border: none;">
+            <tr style="border: none;">
+                
+                {{-- 1. ADMIN IT (Pengaju) --}}
+                <td width="20%" class="text-center" style="border: none; vertical-align: top;">
+                    <p class="text-bold" style="margin-bottom: 5px;">Diajukan Oleh</p>
+                    @if(isset($qrAdmin) && $qrAdmin)
+                        <img src="data:image/png;base64, {{ $qrAdmin }}" class="qr-img">
+                        <br><span style="font-size: 8pt;">Admin IT</span>
+                    @endif
+                </td>
 
-            {{-- 2. KEPALA RUANG UNIT --}}
-            <td width="25%" class="text-center" style="border: none; vertical-align: top;">
-                <p class="text-bold" style="margin-bottom: 5px;">Mengetahui</p>
-                @if(isset($qrkepala_ruang) && $qrkepala_ruang)
-                    <img src="data:image/png;base64, {{ $qrkepala_ruang }}" alt="QR Kepala Ruang" style="width: 70px; height: 70px;">
-                    <br>
-                    <span style="font-size: 9pt;">Kepala Ruang</span><br>
-                    <span style="font-size: 8pt;" class="text-green">(Tervalidasi)</span>
-                @else
-                    <div class="status-box">
-                        @if($procurement->status == 'rejected')
-                            <span class="text-bold text-red" style="font-size: 9pt;">DITOLAK</span>
-                        @else
-                            {{-- Jika status submitted_to_kepala_ruang --}}
-                            <span class="italic text-gray" style="font-size: 9pt;">Menunggu<br>Persetujuan</span>
-                        @endif
-                    </div>
-                @endif
-            </td>
+                {{-- 2. KEPALA RUANG --}}
+                <td width="20%" class="text-center" style="border: none; vertical-align: top;">
+                    <p class="text-bold" style="margin-bottom: 5px;">Mengetahui</p>
+                    @if(isset($qrkepala_ruang) && $qrkepala_ruang)
+                        <img src="data:image/png;base64, {{ $qrkepala_ruang }}" class="qr-img">
+                        <br><span style="font-size: 8pt;">Kepala Ruang</span>
+                    @else
+                        <div class="status-box">
+                            <span class="italic text-gray" style="font-size: 8pt;">
+                                @if($procurement->status == 'rejected') - @else Menunggu @endif
+                            </span>
+                        </div>
+                    @endif
+                </td>
 
-            {{-- 3. BENDAHARA --}}
-            <td width="25%" class="text-center" style="border: none; vertical-align: top;">
-                <p class="text-bold" style="margin-bottom: 5px;">Verifikasi</p>
-                @if(isset($qrBendahara) && $qrBendahara)
-                    <img src="data:image/png;base64, {{ $qrBendahara }}" alt="QR Bendahara" style="width: 70px; height: 70px;">
-                    <br>
-                    <span style="font-size: 9pt;">Bendahara</span><br>
-                    <span style="font-size: 8pt;" class="text-green">(Tervalidasi)</span>
-                @else
-                    <div class="status-box">
-                        @if($procurement->status == 'rejected')
-                             <span class="text-gray">-</span>
-                        @elseif($procurement->status == 'submitted_to_kepala_ruang')
-                             <span class="italic text-gray" style="font-size: 8pt;">Menunggu<br>Kepala Ruang</span>
-                        @else
-                             {{-- Status submitted_to_bendahara --}}
-                             <span class="italic text-gray" style="font-size: 9pt;">Menunggu<br>Verifikasi</span>
-                        @endif
-                    </div>
-                @endif
-            </td>
+                {{-- 3. MANAGEMENT (BARU) --}}
+                <td width="20%" class="text-center" style="border: none; vertical-align: top;">
+                    <p class="text-bold" style="margin-bottom: 5px;">Validasi</p>
+                    @if(isset($qrManagement) && $qrManagement)
+                        <img src="data:image/png;base64, {{ $qrManagement }}" class="qr-img">
+                        <br><span style="font-size: 8pt;">Management</span>
+                        
+                    @else
+                        <div class="status-box">
+                            <span class="italic text-gray" style="font-size: 8pt;">
+                                @if($procurement->status == 'submitted_to_management')
+                                    Menunggu<br>Management
+                                @else
+                                    -
+                                @endif
+                            </span>
+                        </div>
+                    @endif
+                </td>
 
-            {{-- 4. DIREKTUR --}}
-            <td width="25%" class="text-center" style="border: none; vertical-align: top;">
-                <p class="text-bold" style="margin-bottom: 5px;">Menyetujui</p>
-                @if(isset($qrDirektur) && $qrDirektur)
-                    <img src="data:image/png;base64, {{ $qrDirektur }}" alt="QR Direktur" style="width: 70px; height: 70px;">
-                    <br>
-                    <span style="font-size: 9pt;">Direktur Utama</span><br>
-                    <span style="font-size: 8pt;" class="text-green">(Disetujui)</span>
-                @else
-                    <div class="status-box">
-                        @if($procurement->status == 'rejected')
-                            <span class="text-gray">-</span>
-                        @elseif($procurement->status == 'submitted_to_director')
-                             <span class="italic text-gray" style="font-size: 9pt;">Menunggu<br>Persetujuan</span>
-                        @else
-                             {{-- Masih di Kepala ruang atau Bendahara --}}
-                             <span class="italic text-gray" style="font-size: 8pt;">Menunggu<br>Validasi Sblmnya</span>
-                        @endif
-                    </div>
-                @endif
-            </td>
+                {{-- 4. BENDAHARA --}}
+                <td width="20%" class="text-center" style="border: none; vertical-align: top;">
+                    <p class="text-bold" style="margin-bottom: 5px;">Verifikasi</p>
+                    @if(isset($qrBendahara) && $qrBendahara)
+                        <img src="data:image/png;base64, {{ $qrBendahara }}" class="qr-img">
+                        <br><span style="font-size: 8pt;">Bendahara</span>
+                    @else
+                        <div class="status-box">
+                            <span class="italic text-gray" style="font-size: 8pt;">
+                                @if($procurement->status == 'submitted_to_bendahara')
+                                    Menunggu<br>Bendahara
+                                @else
+                                    -
+                                @endif
+                            </span>
+                        </div>
+                    @endif
+                </td>
 
-        </tr>
-    </table>
+                {{-- 5. DIREKTUR --}}
+                <td width="20%" class="text-center" style="border: none; vertical-align: top;">
+                    <p class="text-bold" style="margin-bottom: 5px;">Menyetujui</p>
+                    @if(isset($qrDirektur) && $qrDirektur)
+                        <img src="data:image/png;base64, {{ $qrDirektur }}" class="qr-img">
+                        <br><span style="font-size: 8pt;">Direktur Utama</span>
+                    @else
+                        <div class="status-box">
+                            <span class="italic text-gray" style="font-size: 8pt;">
+                                @if($procurement->status == 'submitted_to_director')
+                                    Menunggu<br>Direktur
+                                @else
+                                    -
+                                @endif
+                            </span>
+                        </div>
+                    @endif
+                </td>
+
+            </tr>
+        </table>
+    </div>
 
 </body>
 </html>

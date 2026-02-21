@@ -277,39 +277,52 @@ public function exportSingleProcurement($id)
         );
     };
 
-    // 4. LOGIKA ESTAFET QR CODE
-    // Status Flow: submitted_to_ -> submitted_to_bendahara -> submitted_to_director -> approved_by_director
+    // 4. LOGIKA ESTAFET QR CODE BARU
+    // Urutan Status: submitted_to_kepala_ruang -> submitted_to_management -> submitted_to_bendahara -> submitted_to_director -> approved_by_director
     
-    $s = $procurement->status; // Simpan status ke variabel pendek biar rapi
+    $s = $procurement->status; 
 
     // A. QR Admin (Selalu Ada)
     $infoAdmin = "Diajukan oleh Admin IT. Tiket: " . ($procurement->report->ticket_number ?? '-') . ". Tgl: " . $procurement->created_at->format('d/m/Y');
     $qrAdmin = $generateQr($infoAdmin);
 
-    // B. QR
-    // Muncul jika status SUDAH MELEWATI  (artinya ada di Bendahara, Direktur, atau Selesai)
+    // B. QR Kepala Ruang
+    // Muncul jika status SUDAH melewati kepala ruang
     $qrkepala_ruang = null;
-    if (in_array($s, ['submitted_to_bendahara', 'submitted_to_director', 'approved_by_director'])) {
+    $statusSetelahKapro = ['submitted_to_management', 'submitted_to_bendahara', 'submitted_to_director', 'approved_by_director'];
+    if (in_array($s, $statusSetelahKapro)) {
         $qrkepala_ruang = $generateQr("Divalidasi Kepala ruang Unit. ID: " . $procurement->id);
     }
 
-    // C. QR Bendahara
-    // Muncul jika status SUDAH MELEWATI Bendahara (artinya ada di Direktur atau Selesai)
+    // C. QR Management (BARU)
+    // Muncul jika status SUDAH melewati Management (sudah sampai di Bendahara atau lebih jauh)
+    $qrManagement = null;
+    $statusSetelahManagement = ['submitted_to_bendahara', 'submitted_to_director', 'approved_by_director'];
+    if (in_array($s, $statusSetelahManagement)) {
+        $qrManagement = $generateQr("Divalidasi oleh Management. Tanggal: " . ($procurement->management_approved_at ?? date('d/m/Y')));
+    }
+
+    // D. QR Bendahara
     $qrBendahara = null;
-    if (in_array($s, ['submitted_to_director', 'approved_by_director'])) {
+    $statusSetelahBendahara = ['submitted_to_director', 'approved_by_director'];
+    if (in_array($s, $statusSetelahBendahara)) {
         $qrBendahara = $generateQr("Diverifikasi Bendahara. Anggaran Tersedia.");
     }
 
-    // D. QR Direktur
-    // Muncul HANYA jika status FINAL (Approved)
+    // E. QR Direktur
     $qrDirektur = null;
     if ($s === 'approved_by_director') {
         $qrDirektur = $generateQr("Disetujui Direktur Utama. " . date('d/m/Y'));
     }
 
-    // 5. Load View
+    // 5. Load View (Pastikan qrManagement dikirim ke compact)
     $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.procurement_single', compact(
-        'procurement', 'qrAdmin', 'qrkepala_ruang', 'qrBendahara', 'qrDirektur'
+        'procurement', 
+        'qrAdmin', 
+        'qrkepala_ruang', 
+        'qrManagement', // Tambahkan ini
+        'qrBendahara', 
+        'qrDirektur'
     ));
     
     return $pdf->download('laporan-pengadaan-' . $procurement->id . '.pdf');

@@ -68,6 +68,23 @@
                         </x-nav-link>
                     @endif
 
+                    {{-- === MENU MANAGEMENT === --}}
+                    @if(Auth::check() && Auth::user()->role === 'management')
+                        <x-nav-link :href="route('management.reports')" :active="request()->routeIs('management.reports')" class="text-sm font-bold tracking-tight">
+                            {{ __('Monitoring Laporan') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('management.procurements')" :active="request()->routeIs('management.procurements')" class="text-sm font-bold tracking-tight">
+                            {{ __('Persetujuan Pengadaan') }}
+                            <span id="badge-management-procurements" class="ml-2 px-2 py-0.5 text-xs rounded-full bg-emerald-600 text-white hidden">0</span>
+                        </x-nav-link>
+                        <x-nav-link :href="route('public.tracking')" :active="request()->routeIs('public.tracking')" class="text-sm font-bold tracking-tight">
+                            {{ __('Tracking Laporan') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('public.home')" :active="request()->routeIs('public.home')" class="text-sm font-bold tracking-tight">
+                            {{ __('Form Laporan Baru') }}
+                        </x-nav-link>
+                    @endif
+
                     {{-- === 3. MENU BENDAHARA === --}}
                     @if(Auth::check() && Auth::user()->role === 'bendahara')
                         <x-nav-link :href="route('bendahara.reports')" :active="request()->routeIs('bendahara.reports')" class="text-sm font-bold tracking-tight">
@@ -149,6 +166,7 @@
                                         'kepala_ruang' => 'bg-yellow-100 text-yellow-800',
                                         'staff' => 'bg-gray-100 text-gray-800',
                                         'bendahara' => 'bg-green-100 text-green-800',
+                                        'management' => 'bg-emerald-100 text-emerald-800',
                                     ];
                                 @endphp
                                 <div class="mt-2">
@@ -232,6 +250,22 @@
                     </x-responsive-nav-link>
                     <x-responsive-nav-link :href="route('apps.index')" :active="request()->routeIs('apps.*')" class="rounded-lg font-bold">
                         {{ __('Projek Aplikasi') }}
+                    </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('public.tracking')" :active="request()->routeIs('public.tracking')" class="rounded-lg font-bold">
+                        {{ __('Tracking Laporan') }}
+                    </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('public.home')" :active="request()->routeIs('public.home')" class="rounded-lg font-bold">
+                        {{ __('Form Laporan Baru') }}
+                    </x-responsive-nav-link>
+                @endif
+
+                {{-- MANAGEMENT MOBILE --}}
+                @if(Auth::user()->role === 'management')
+                    <x-responsive-nav-link :href="route('management.reports')" :active="request()->routeIs('management.reports')" class="rounded-lg font-bold">
+                        {{ __('Monitoring Laporan') }}
+                    </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('management.procurements')" :active="request()->routeIs('management.procurements')" class="rounded-lg font-bold">
+                        {{ __('Persetujuan Pengadaan') }}
                     </x-responsive-nav-link>
                     <x-responsive-nav-link :href="route('public.tracking')" :active="request()->routeIs('public.tracking')" class="rounded-lg font-bold">
                         {{ __('Tracking Laporan') }}
