@@ -12,7 +12,14 @@ class Report extends Model
 
     protected $fillable = [
         'ticket_number', 'pelapor_nama', 'ruangan', 'keluhan', 
-        'urgency', 'urgency_reason', 'status', 'tindakan_teknisi', 'room_id',
+        'urgency', 'urgency_reason', 'status', 'tindakan_teknisi', 'room_id','needs_procurement',
+    'procurement_items_request',
+    'procurement_status',
+    ];
+
+    protected $casts = [
+        'procurement_items_request' => 'array',
+        'needs_procurement' => 'boolean',
     ];
 
     // Relasi ke User (Pelapor)
@@ -55,4 +62,5 @@ class Report extends Model
             default          => 'bg-gray-100 text-gray-800',
         };
     }
+
 }

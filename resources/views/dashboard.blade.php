@@ -24,7 +24,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 
                 {{-- KOLOM 1: MENUNGGU PERSETUJUAN --}}
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[600px]"> {{-- Set Fixed Height agar rapi --}}
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[600px]">
                     {{-- Header --}}
                     <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 flex-shrink-0">
                         <div class="flex items-center gap-2">
@@ -33,7 +33,6 @@
                             </span>
                             <h3 class="text-lg font-bold text-gray-800">Menunggu Persetujuan</h3>
                         </div>
-                        {{-- PERBAIKAN: Gunakan ->total() agar menghitung semua data, bukan cuma page ini --}}
                         <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-1 rounded-full">{{ $pendingReports->total() }} Baru</span>
                     </div>
                     
@@ -66,13 +65,74 @@
                                     </div>
                                     <span class="bg-amber-50 text-amber-700 text-[10px] uppercase font-bold px-2 py-1 rounded shrink-0">Pending</span>
                                 </div>
-                                <p class="text-sm text-gray-600 mb-4 bg-gray-50 p-2 rounded border border-gray-100">"{{ $report->keluhan }}"</p>
-                                <form action="{{ route('admin.acc', $report->id) }}" method="POST" class="text-right">
-                                    @csrf @method('PATCH')
-                                    <button type="submit" class="inline-flex items-center gap-1 bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-800 transition shadow-sm hover:shadow">
-                                        ACC & Proses
-                                    </button>
-                                </form>
+
+                                {{-- Keluhan --}}
+                                <p class="text-sm text-gray-600 mb-3 bg-gray-50 p-2 rounded border border-gray-100">"{{ $report->keluhan }}"</p>
+
+                                {{-- FITUR BARU: Info Pengadaan Langsung --}}
+                                @if($report->needs_procurement && $report->procurement_items_request)
+                                <div class="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                                    <div class="flex items-center gap-1 mb-2 text-blue-800">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                                        <span class="text-xs font-bold uppercase tracking-wider">Permintaan Pengadaan</span>
+                                    </div>
+                                    <ul class="space-y-1">
+                                        @foreach($report->procurement_items_request as $item)
+                                            @php
+                                                // Safely extract values and convert to string
+                                                $itemName = '';
+                                                $itemQty = '';
+                                                
+                                                if (is_array($item)) {
+                                                    // Try different possible field names
+                                                    $itemName = $item['nama'] ?? ($item['name'] ?? '');
+                                                    $itemQty = $item['jumlah'] ?? ($item['quantity'] ?? '');
+                                                } else {
+                                                    $itemName = $item;
+                                                }
+                                                
+                                                // Convert arrays to strings
+                                                if (is_array($itemName)) {
+                                                    $itemName = implode(', ', array_filter((array)$itemName));
+                                                }
+                                                if (is_array($itemQty)) {
+                                                    $itemQty = implode(', ', array_filter((array)$itemQty));
+                                                }
+                                                
+                                                $itemName = trim((string)$itemName);
+                                                $itemQty = trim((string)$itemQty);
+                                            @endphp
+                                            @if($itemName)
+                                            <li class="text-xs text-blue-700 flex justify-between">
+                                                <span>• {{ $itemName }}</span>
+                                                @if($itemQty)<span class="font-bold">x{{ $itemQty }}</span>@endif
+                                            </li>
+                                            @endif
+                                        @endforeach
+                                    </ul>
+                                </div>
+                                @endif
+
+                                <div class="flex justify-end gap-2">
+                                    {{-- Tombol Pengadaan (Muncul hanya jika ada label needs_procurement) --}}
+                                    @if($report->needs_procurement && $report->procurement_status == 'pending_admin')
+                                        <form action="{{ route('admin.procurement.convert', $report->id) }}" method="POST">
+                                            @csrf
+                                            <button type="submit" class="inline-flex items-center gap-1 bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition shadow-sm">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                                                Proses Pengadaan
+                                            </button>
+                                        </form>
+                                    @endif
+
+                                    {{-- Tombol ACC Biasa --}}
+                                    <form action="{{ route('admin.acc', $report->id) }}" method="POST">
+                                        @csrf @method('PATCH')
+                                        <button type="submit" class="inline-flex items-center gap-1 bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-800 transition shadow-sm hover:shadow">
+                                            ACC & Proses
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                         @empty
                             <div class="text-center py-10"><p class="text-gray-500 text-sm font-medium">Semua aman! Tidak ada laporan pending.</p></div>

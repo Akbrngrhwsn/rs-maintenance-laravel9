@@ -59,6 +59,40 @@
                         <x-input-error :messages="$errors->get('urgency_reason')" class="mt-2" />
                     </div>
 
+                    <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" id="checkProcurement" name="needs_procurement" value="1" 
+                                class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500">
+                            <span class="ml-2 text-sm font-semibold text-blue-800">Ajukan Pengadaan Barang Langsung</span>
+                        </label>
+                    </div>
+
+                    <div id="procurementForm" class="hidden mt-2 p-4 bg-white border border-blue-200 rounded-lg shadow-inner">
+                        <h4 class="text-sm font-bold text-gray-700 mb-2">Daftar Barang yang Dibutuhkan:</h4>
+                        <div id="itemsContainer">
+                            <div class="flex gap-2 mb-2 item-row">
+                                <input type="text" name="item_names[]" placeholder="Nama Barang (contoh: Mouse Logitech)" class="flex-1 rounded-md border-gray-300 text-sm">
+                                <input type="number" name="item_qtys[]" placeholder="Jml" class="w-20 rounded-md border-gray-300 text-sm">
+                            </div>
+                        </div>
+                        <button type="button" onclick="addItemRow()" class="text-xs text-blue-600 font-medium">+ Tambah Barang Lain</button>
+                    </div>
+
+                    <script>
+                        const checkbox = document.getElementById('checkProcurement');
+                        const form = document.getElementById('procurementForm');
+
+                        checkbox.addEventListener('change', function() {
+                            form.classList.toggle('hidden', !this.checked);
+                        });
+
+                        function addItemRow() {
+                            const row = document.querySelector('.item-row').cloneNode(true);
+                            row.querySelectorAll('input').forEach(input => input.value = '');
+                            document.getElementById('itemsContainer').appendChild(row);
+                        }
+                    </script>
+
                     <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-blue-900 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all hover:shadow-lg transform hover:-translate-y-0.5">
                         Kirim Laporan
                     </button>

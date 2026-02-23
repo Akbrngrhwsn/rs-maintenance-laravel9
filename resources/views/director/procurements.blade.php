@@ -105,10 +105,15 @@
                                                                     $qty = isset($item['jumlah']) ? (int)$item['jumlah'] : 1;
                                                                     $price = isset($item['harga_satuan']) ? (float)$item['harga_satuan'] : (isset($item['harga']) ? (float)$item['harga'] : (isset($item['biaya']) ? (float)$item['biaya'] : 0));
                                                                     $subtotal = $price * $qty;
+                                                                    
+                                                                    // Safely extract values - convert arrays to string if needed
+                                                                    $nama = is_array($item['nama'] ?? null) ? implode(', ', (array)$item['nama']) : ($item['nama'] ?? '-');
+                                                                    $merk = is_array($item['merk'] ?? null) ? implode(', ', (array)$item['merk']) : ($item['merk'] ?? ($item['spek'] ?? ($item['tipe'] ?? '-')));
+                                                                    $merk = is_array($merk) ? implode(', ', (array)$merk) : $merk;
                                                                 @endphp
                                                                 <tr>
-                                                                    <td class="px-4 py-3 font-medium text-gray-800">{{ $item['nama'] ?? '-' }}</td>
-                                                                    <td class="px-4 py-3 text-gray-500">{{ $item['merk'] ?? ($item['spek'] ?? ($item['tipe'] ?? '-')) }}</td>
+                                                                    <td class="px-4 py-3 font-medium text-gray-800">{{ $nama }}</td>
+                                                                    <td class="px-4 py-3 text-gray-500">{{ $merk }}</td>
                                                                     <td class="px-4 py-3 text-right font-mono">{{ $qty }}</td>
                                                                     <td class="px-4 py-3 text-right font-mono">Rp {{ number_format($price, 0, ',', '.') }}</td>
                                                                     <td class="px-4 py-3 text-right font-mono font-bold text-gray-800">Rp {{ number_format($subtotal, 0, ',', '.') }}</td>

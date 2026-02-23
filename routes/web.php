@@ -76,6 +76,7 @@ Route::middleware('auth')->group(function () {
         // Pengadaan (Procurement)
         Route::get('/admin/report/{id}/procurement', [ProcurementController::class, 'create'])->name('procurement.create');
         Route::post('/admin/report/{id}/procurement', [ProcurementController::class, 'store'])->name('procurement.store');
+        Route::post('/admin/procurement/{id}/convert', [ProcurementController::class, 'convert'])->name('admin.procurement.convert');
         // Admin: Daftar Pengadaan (lihat semua pengadaan)
         Route::get('/admin/procurements', [ProcurementController::class, 'index'])->name('admin.procurements.index');
         Route::get('/admin/procurement/{id}/edit', [ProcurementController::class, 'edit'])->name('procurement.edit');

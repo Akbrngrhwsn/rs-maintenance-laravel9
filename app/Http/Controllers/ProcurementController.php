@@ -14,6 +14,13 @@ class ProcurementController extends Controller
         return view('procurement.form', compact('report'));
     }
 
+    public function convert($id)
+    {
+        $report = Report::findOrFail($id);
+        // Redirect to the procurement creation form
+        return redirect()->route('procurement.create', $id)->with('success', 'Siap untuk diproses sebagai pengadaan.');
+    }
+
     public function edit($id)
     {
         $proc = Procurement::with('report')->findOrFail($id);

@@ -28,16 +28,33 @@ class PublicReportController extends Controller
 
         $room = Room::find($request->room_id);
 
+        $needsProcurement = $request->has('needs_procurement');
+
+        $items = [];
+        if ($request->has('needs_procurement')) {
+            foreach ($request->item_names as $key => $name) {
+                if ($name) {
+                    $items[] = [
+                        'name' => $name,
+                        'quantity' => $request->item_qtys[$key] ?? 1
+                    ];
+                }
+            }
+        }
+
         Report::create([
-            'ruangan' => $room?->name ?? null,
             'room_id' => $request->room_id,
+            'ruangan' => Room::find($request->room_id)?->name,
             'keluhan' => $request->keluhan,
             'urgency' => $request->urgency,
             'urgency_reason' => $request->urgency_reason,
-            'status'  => 'Belum Diproses' // Default
+            'status' => 'Belum Diproses',
+            'needs_procurement' => $request->has('needs_procurement'),
+            'procurement_items_request' => $items, // Simpan array ke JSON
+            'procurement_status' => $request->has('needs_procurement') ? 'pending_admin' : null,
         ]);
 
-        return redirect()->route('public.tracking')->with('success', 'Laporan berhasil dikirim!');
+        return redirect()->route('public.tracking')->with('success', 'Laporan dan Permintaan Pengadaan dikirim!');
     }
 
     // Halaman Tracking

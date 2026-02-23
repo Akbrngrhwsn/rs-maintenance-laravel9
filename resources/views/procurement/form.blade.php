@@ -9,17 +9,97 @@
         <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm rounded-2xl border border-gray-100 p-8">
                 
-                {{-- Detail Laporan Singkat --}}
-                <div class="mb-8 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                    <h3 class="text-sm font-bold text-gray-500 uppercase mb-2">Detail Kerusakan:</h3>
-                    <div class="grid grid-cols-2 gap-4">
+                {{-- Detail Laporan Lengkap --}}
+                <div class="mb-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                    <h3 class="text-sm font-bold text-blue-900 uppercase mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Detail Permintaan Pengadaan
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div>
-                            <p class="text-xs text-gray-400">Nomor Tiket</p>
-                            <p class="font-mono font-bold">{{ $report->ticket_number }}</p>
+                            <p class="text-xs text-gray-600 font-semibold uppercase">Nomor Tiket</p>
+                            <p class="font-mono font-bold text-lg text-blue-900">{{ $report->ticket_number }}</p>
                         </div>
                         <div>
-                            <p class="text-xs text-gray-400">Ruangan</p>
-                            <p class="font-bold">{{ $report->ruangan }}</p>
+                            <p class="text-xs text-gray-600 font-semibold uppercase">Ruangan</p>
+                            <p class="font-bold text-blue-900">{{ $report->ruangan }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-600 font-semibold uppercase">Pelapor</p>
+                            <p class="font-bold text-blue-900">{{ $report->pelapor_nama }}</p>
+                        </div>
+                        <div class="lg:col-span-3">
+                            <p class="text-xs text-gray-600 font-semibold uppercase">Keluhan / Masalah</p>
+                            <p class="text-sm text-gray-800 mt-1 p-2 bg-white rounded border border-gray-200">{{ $report->keluhan }}</p>
+                        </div>
+                        @if($report->tindakan_teknisi)
+                        <div class="lg:col-span-3">
+                            <p class="text-xs text-gray-600 font-semibold uppercase">Tindakan Teknisi</p>
+                            <p class="text-sm text-gray-800 mt-1 p-2 bg-white rounded border border-gray-200">{{ $report->tindakan_teknisi }}</p>
+                        </div>
+                        @endif
+                        @if($report->procurement_items_request && count($report->procurement_items_request ?? []) > 0)
+                        <div class="lg:col-span-3">
+                            <p class="text-xs text-gray-600 font-semibold uppercase">Barang yang Diminta</p>
+                            <ul class="text-sm text-gray-800 mt-1 p-2 bg-white rounded border border-gray-200 space-y-1">
+                                @foreach($report->procurement_items_request as $item)
+                                    @php
+                                        // Safely extract and convert all values to string
+                                        // Handle both name variations: 'nama' and 'name'
+                                        if (is_array($item)) {
+                                            $itemName = $item['nama'] ?? ($item['name'] ?? '');
+                                            $itemQty = $item['jumlah'] ?? ($item['quantity'] ?? '');
+                                        } else {
+                                            $itemName = $item;
+                                            $itemQty = '';
+                                        }
+                                        
+                                        // If itemName is still an array, convert to string
+                                        if (is_array($itemName)) {
+                                            $itemName = implode(', ', array_filter((array)$itemName));
+                                        }
+                                        $itemName = trim((string)$itemName);
+                                        
+                                        // Convert quality to string if array
+                                        if (is_array($itemQty)) {
+                                            $itemQty = implode(', ', array_filter((array)$itemQty));
+                                        }
+                                        $itemQty = trim((string)$itemQty);
+                                    @endphp
+                                    @if($itemName)
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-blue-600 font-bold">•</span>
+                                        <span>{{ $itemName }} @if($itemQty)({{ $itemQty }} unit)@endif</span>
+                                    </li>
+                                    @endif
+                                @endforeach
+                            </ul>
+                        </div>
+                        @else
+                        <div class="lg:col-span-3">
+                            <p class="text-xs text-gray-600 font-semibold uppercase">Barang yang Diminta</p>
+                            <p class="text-sm text-gray-500 mt-1 p-2 bg-gray-50 rounded border border-gray-200 italic">Belum ada permintaan barang</p>
+                        </div>
+                        @endif
+                        <div>
+                            <p class="text-xs text-gray-600 font-semibold uppercase">Tingkat Urgensi</p>
+                            <div class="mt-1">
+                                @php
+                                    $urgencyColors = [
+                                        'high' => 'bg-red-100 text-red-800',
+                                        'medium' => 'bg-yellow-100 text-yellow-800',
+                                        'low' => 'bg-green-100 text-green-800'
+                                    ];
+                                    $urgencyLabels = [
+                                        'high' => 'URGENT',
+                                        'medium' => 'NORMAL',
+                                        'low' => 'RENDAH'
+                                    ];
+                                @endphp
+                                <span class="inline-block px-3 py-1 rounded-full text-xs font-bold {{ $urgencyColors[$report->urgency] ?? 'bg-gray-100 text-gray-800' }}">
+                                    {{ $urgencyLabels[$report->urgency] ?? $report->urgency }}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>

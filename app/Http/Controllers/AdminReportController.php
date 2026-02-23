@@ -49,6 +49,23 @@ class AdminReportController extends Controller
         return view('dashboard', compact('pendingReports', 'processedReports', 'historyReports'));
     }
 
+    public function convertToProcurement($id)
+    {
+        $report = Report::findOrFail($id);
+
+        // 1. Buat Pengadaan Baru dengan data barang dari user
+        $procurement = Procurement::create([
+            'report_id' => $report->id,
+            'status' => 'submitted_to_kepala_ruang', // Langsung masuk alur estafet
+            'items' => $report->procurement_items_request, // Data barang otomatis terisi
+        ]);
+
+        // 2. Tandai laporan selesai diproses admin
+        $report->update(['procurement_status' => 'approved']);
+
+        return back()->with('success', 'Data pengadaan berhasil dibuat dan diteruskan ke Kepala Ruang.');
+    }
+
     public function acc($id)
     {
         $report = Report::findOrFail($id);
