@@ -112,6 +112,9 @@ Route::middleware('auth')->group(function () {
     
         Route::get('/admin/apps/export-monthly', [AppRequestController::class, 'exportMonthlyAppsPdf'])->name('admin.apps.export.monthly');
 
+        // Admin IT: Process App Requests (fill procurement estimate or accept/reject)
+        Route::patch('/admin/apps/{id}/process', [AppRequestController::class, 'adminProcess'])->name('admin.apps.process');
+
     });
 
     Route::middleware(['auth', 'verified'])->group(function () {
@@ -143,12 +146,20 @@ Route::middleware('auth')->group(function () {
         
         // Khusus Direktur: Approve
         Route::patch('/{id}/approve', [AppRequestController::class, 'approve'])->name('apps.approve');
+
+        // Khusus Management: Approve / Reject (forwarding logic based on needs_procurement)
+        Route::patch('/{id}/management-approve', [AppRequestController::class, 'managementApprove'])->name('apps.management_approve');
+        Route::patch('/{id}/management-reject', [AppRequestController::class, 'managementReject'])->name('apps.management_reject');
         
         // Khusus Admin: Kelola Fitur & Review
         Route::post('/{id}/feature', [AppRequestController::class, 'addFeature'])->name('apps.add_feature');
         Route::patch('/feature/{id}/toggle', [AppRequestController::class, 'toggleFeature'])->name('apps.toggle_feature');
         Route::patch('/{id}/complete', [AppRequestController::class, 'markComplete'])->name('apps.complete');
         Route::patch('/{id}/admin-review', [AppRequestController::class, 'adminReview'])->name('apps.admin_review');
+
+        // Bendahara: Approve/Reject directly on AppRequest when no Procurement record exists
+        Route::patch('/{id}/bendahara-approve', [AppRequestController::class, 'bendaharaApproveAppRequest'])->name('apps.bendahara_approve');
+        Route::patch('/{id}/bendahara-reject', [AppRequestController::class, 'bendaharaRejectAppRequest'])->name('apps.bendahara_reject');
 
         Route::delete('/apps/features/{id}/delete', [AppRequestController::class, 'deleteFeature'])->name('apps.delete_feature');
     });

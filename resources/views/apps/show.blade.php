@@ -122,7 +122,7 @@
                 </div>
 
                 {{-- TOMBOL AKSI (Approve Direktur / Review Admin) --}}
-                @if(Auth::user()->role === 'direktur' && $project->status === 'pending_director')
+                @if(Auth::user()->role === 'direktur' && in_array($project->status, ['pending_director', 'submitted_to_director']))
                     <div class="mt-6 border-t pt-6">
                         <form action="{{ route('apps.approve', $project->id) }}" method="POST" class="flex gap-3 items-center">
                             @csrf @method('PATCH')
@@ -133,7 +133,9 @@
                     </div>
                 @endif
                 
-                @if(Auth::user()->role === 'admin' && $project->status === 'approved')
+                @if(Auth::user()->role === 'admin')
+                    {{-- Admin processing: when Director already approved, admin starts work --}}
+                    @if($project->status === 'approved')
                      <div class="mt-6 border-t pt-6">
                         <form action="{{ route('apps.admin_review', $project->id) }}" method="POST" class="flex gap-3 items-center">
                             @csrf @method('PATCH')
@@ -142,9 +144,311 @@
                             <button type="submit" name="action" value="tolak" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg text-sm font-bold shadow transition">Tolak</button>
                         </form>
                     </div>
+                    @endif
+
+                {{-- management panel moved below admin block so role check works correctly --}}
+
+                    {{-- Admin initial processing: fill procurement estimate and forward to Management (when submitted_to_admin) --}}
+                    @if($project->status === 'submitted_to_admin')
+                    <div class="mt-6 border-t pt-6">
+                        <form action="{{ route('admin.apps.process', $project->id) }}" method="POST" class="flex flex-col gap-3">
+                            @csrf @method('PATCH')
+
+                            {{-- Requested items list (admin uses procurement-style inputs) --}}
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-4">Pengajuan Barang</label>
+
+                                @php
+                                    $existingItems = [];
+                                    if (is_array($project->requested_items)) {
+                                        $existingItems = $project->requested_items;
+                                    } elseif (is_string($project->requested_items) && $project->requested_items !== '') {
+                                        $decoded_req = @json_decode($project->requested_items, true);
+                                        if (is_array($decoded_req)) $existingItems = $decoded_req;
+                                    }
+                                    $count = max(1, count($existingItems));
+                                @endphp
+
+                                <div id="item-list" class="space-y-6">
+                                    @for($i = 0; $i < $count; $i++)
+                                        @php $it = $existingItems[$i] ?? []; @endphp
+                                        <div class="item-card bg-white p-4 rounded-lg border" id="item-{{ $i }}">
+                                            <div class="flex justify-between items-center mb-3">
+                                                <h3 class="item-number font-bold text-blue-700">Pengajuan Barang #{{ $i + 1 }}</h3>
+                                                <button type="button" onclick="removeRow({{ $i }})" class="text-red-600 px-3 py-1 rounded bg-red-50">Hapus</button>
+                                            </div>
+                                            <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                                                <div class="md:col-span-4">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Nama/Jenis Barang</label>
+                                                    <input type="text" name="items[{{ $i }}][nama]" value="{{ $it['nama'] ?? $it['name'] ?? '' }}" placeholder="Contoh: SSD 512GB" class="w-full border-gray-200 rounded px-3 py-2">
+                                                </div>
+                                                <div class="md:col-span-4">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Merk/Tipe</label>
+                                                    <input type="text" name="items[{{ $i }}][merk]" value="{{ $it['merk'] ?? $it['brand'] ?? '' }}" placeholder="Contoh: ASUS" class="w-full border-gray-200 rounded px-3 py-2">
+                                                </div>
+                                                <div class="md:col-span-1">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Jml</label>
+                                                    <input type="number" name="items[{{ $i }}][jumlah]" value="{{ $it['jumlah'] ?? $it['qty'] ?? 1 }}" class="w-20 border-gray-200 rounded px-3 py-2">
+                                                </div>
+                                                <div class="md:col-span-3">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Estimasi Harga Satuan (RP)</label>
+                                                    <input type="number" step="0.01" name="items[{{ $i }}][harga_satuan]" value="{{ $it['harga_satuan'] ?? $it['unit_price'] ?? $it['harga'] ?? 0 }}" class="w-full border-gray-200 rounded px-3 py-2">
+                                                </div>
+                                                <div class="md:col-span-12 mt-2">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Deskripsi</label>
+                                                    <input type="text" name="items[{{ $i }}][deskripsi]" value="{{ $it['keterangan'] ?? $it['description'] ?? '' }}" placeholder="Keterangan tambahan (opsional)" class="w-full border-gray-200 rounded px-3 py-2">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endfor
+                                </div>
+
+                                <div class="mt-3">
+                                    <button type="button" onclick="addRow()" class="text-sm text-blue-600 font-medium">+ Tambah Barang Lain</button>
+                                </div>
+
+                                <div class="flex gap-3 mt-3">
+                                    <input type="number" step="0.01" name="procurement_estimate" id="procurementEstimate" placeholder="Estimasi Total (otomatis dari daftar barang)" readonly class="text-sm border-gray-300 rounded-lg shadow-sm bg-gray-50 flex-1">
+                                    <input type="text" name="catatan_admin" placeholder="Catatan singkat (opsional)" class="text-sm border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 w-64">
+                                </div>
+
+                                <div class="flex gap-3 justify-end mt-3">
+                                    <button type="submit" name="action" value="reject" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg text-sm font-bold shadow">Tolak</button>
+                                    <button type="submit" name="action" value="forward" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-bold shadow">Proses & Teruskan ke Management</button>
+                                </div>
+
+                                <script>
+                                    let counter = {{ $count }};
+
+                                    function addRow(){
+                                        const container = document.getElementById('item-list');
+                                        const idx = counter;
+                                        const el = document.createElement('div');
+                                        el.className = 'item-card bg-white p-4 rounded-lg border mt-6';
+                                        el.id = 'item-' + idx;
+                                        el.innerHTML = `
+                                            <div class="flex justify-between items-center mb-3">
+                                                <h3 class="item-number font-bold text-blue-700">Pengajuan Barang #${idx + 1}</h3>
+                                                <button type="button" onclick="removeRow(${idx})" class="text-red-600 px-3 py-1 rounded bg-red-50">Hapus</button>
+                                            </div>
+                                            <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                                                <div class="md:col-span-4">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Nama/Jenis Barang</label>
+                                                    <input type="text" name="items[${idx}][nama]" placeholder="Contoh: SSD 512GB" class="w-full border-gray-200 rounded px-3 py-2">
+                                                </div>
+                                                <div class="md:col-span-4">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Merk/Tipe</label>
+                                                    <input type="text" name="items[${idx}][merk]" placeholder="Contoh: ASUS" class="w-full border-gray-200 rounded px-3 py-2">
+                                                </div>
+                                                <div class="md:col-span-1">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Jml</label>
+                                                    <input type="number" name="items[${idx}][jumlah]" value="1" class="w-20 border-gray-200 rounded px-3 py-2 qty-input">
+                                                </div>
+                                                <div class="md:col-span-3">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Estimasi Harga Satuan (RP)</label>
+                                                    <input type="number" step="0.01" name="items[${idx}][harga_satuan]" value="0" class="w-full border-gray-200 rounded px-3 py-2 unit-input">
+                                                </div>
+                                                <div class="md:col-span-12 mt-2">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Deskripsi</label>
+                                                    <input type="text" name="items[${idx}][deskripsi]" placeholder="Keterangan tambahan (opsional)" class="w-full border-gray-200 rounded px-3 py-2">
+                                                </div>
+                                            </div>`;
+                                        container.appendChild(el);
+                                        counter++;
+                                        computeEstimatedTotal();
+                                    }
+
+                                    function removeRow(id){
+                                        const el = document.getElementById('item-' + id);
+                                        if(el) el.remove();
+                                        reorderNumbers();
+                                        computeEstimatedTotal();
+                                    }
+
+                                    function reorderNumbers(){
+                                        const cards = document.querySelectorAll('.item-card');
+                                        cards.forEach((card, idx) => {
+                                            const title = card.querySelector('.item-number');
+                                            if(title) title.innerText = 'Pengajuan Barang #' + (idx + 1);
+                                        });
+                                        counter = cards.length;
+                                    }
+
+                                    function computeEstimatedTotal(){
+                                        let total = 0;
+                                        document.querySelectorAll('[name$="[jumlah]"]').forEach(function(qEl){
+                                            const attr = qEl.getAttribute('name');
+                                            // find corresponding harga_satuan input for same index
+                                            const idxMatch = attr.match(/items\[(\d+)\]\[jumlah\]/);
+                                            if(!idxMatch) return;
+                                            const idx = idxMatch[1];
+                                            const unitEl = document.querySelector(`[name="items[${idx}][harga_satuan]"]`);
+                                            const qty = parseFloat(qEl.value) || 0;
+                                            const unit = unitEl ? parseFloat(unitEl.value) || 0 : 0;
+                                            total += qty * unit;
+                                        });
+                                        const totalInput = document.getElementById('procurementEstimate');
+                                        if(totalInput){
+                                            totalInput.value = total > 0 ? total.toFixed(2) : '';
+                                        }
+                                    }
+
+                                    // Listen for input changes via delegation
+                                    document.addEventListener('input', function(e){
+                                        if(!e.target) return;
+                                        const name = e.target.getAttribute('name') || '';
+                                        if(name.endsWith('[jumlah]') || name.endsWith('[harga_satuan]')){
+                                            computeEstimatedTotal();
+                                        }
+                                    });
+
+                                    // initial compute on load
+                                    reorderNumbers();
+                                    computeEstimatedTotal();
+                                </script>
+                            </div>
+                    @endif
                 @endif
             </div>
 
+                {{-- Universal: Rincian Pengajuan & Pengadaan (Tampil untuk semua role/status) --}}
+                @php
+                    $procUniversal = \App\Models\Procurement::where('app_request_id', $project->id)->first();
+                    if($procUniversal) {
+                        $displayItems = is_array($procUniversal->items) ? $procUniversal->items : [];
+                        $displayTotal = $procUniversal->total ?? null;
+                        $noteForDisplay = $procUniversal->management_note ?? $procUniversal->director_note ?? null;
+                        $procDate = $procUniversal->created_at ?? null;
+                        $procId = $procUniversal->id;
+                    } else {
+                        $displayItems = [];
+                        if (is_array($project->requested_items)) {
+                            $displayItems = $project->requested_items;
+                        } elseif (is_string($project->requested_items) && $project->requested_items !== '') {
+                            $decoded_univ = @json_decode($project->requested_items, true);
+                            if (is_array($decoded_univ)) $displayItems = $decoded_univ;
+                        }
+                        $displayTotal = $project->procurement_estimate ?? null;
+                        $noteForDisplay = $project->catatan_admin ?? $project->catatan_management ?? $project->catatan_direktur ?? null;
+                        $procDate = $project->created_at ?? null;
+                        $procId = null;
+                    }
+                @endphp
+
+                <div class="mt-6 border-t pt-6">
+                    <h4 class="font-bold mb-3">Rincian Pengajuan & Pengadaan</h4>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div class="md:col-span-2 bg-white border rounded-lg p-4">
+                            <div class="text-sm text-gray-600">Detail Proyek</div>
+                            <div class="mt-2">
+                                <div class="text-sm"><strong>Tiket:</strong> {{ $project->ticket_number ?? '-' }}</div>
+                                <div class="text-sm"><strong>Pemohon:</strong> {{ $project->user->name ?? '-' }}</div>
+                                <div class="text-sm"><strong>Tanggal:</strong> {{ $project->created_at->translatedFormat('d F Y') }}</div>
+                                <div class="text-sm mt-2"><strong>Deskripsi:</strong>
+                                    <div class="text-gray-600">{{ Str::limit($project->deskripsi, 1000) }}</div>
+                                </div>
+                                @if($procId)
+                                    <div class="text-sm mt-3"><strong>ID Pengadaan:</strong> {{ $procId }}</div>
+                                    @if($procDate)
+                                        <div class="text-sm"><strong>Tanggal Pengadaan:</strong> {{ $procDate->translatedFormat('d F Y') }}</div>
+                                    @endif
+                                @endif
+                                @if($noteForDisplay)
+                                    <div class="text-sm mt-3"><strong>Catatan:</strong>
+                                        <div class="text-gray-600">{{ $noteForDisplay }}</div>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="bg-white border rounded-lg p-4">
+                            <div class="text-sm text-gray-600">Estimasi Total Pengadaan</div>
+                            @php
+                                $computed = 0;
+                                if (!empty($displayItems) && is_array($displayItems)) {
+                                    foreach ($displayItems as $it) {
+                                        $qty = $it['jumlah'] ?? $it['qty'] ?? 0;
+                                        $unit = $it['harga_satuan'] ?? $it['unit_price'] ?? $it['harga'] ?? 0;
+                                        $computed += ($qty * $unit);
+                                    }
+                                }
+                                $finalTotal = $displayTotal ?? ($computed > 0 ? $computed : 0);
+                            @endphp
+                            <div class="text-xl font-bold mt-2">Rp {{ number_format($finalTotal ?? 0, 2, ',', '.') }}</div>
+                            <div class="text-xs text-gray-500 mt-2">(Total dihitung dari daftar barang)</div>
+                        </div>
+                    </div>
+
+                    @if(!empty($displayItems))
+                        <div class="bg-white border rounded-lg p-4 mb-4">
+                            <ul class="space-y-3">
+                                @foreach($displayItems as $it)
+                                    <li class="flex justify-between items-start gap-4">
+                                        <div class="flex-1">
+                                            <div class="font-semibold">{{ $it['nama'] ?? $it['name'] ?? '-' }}</div>
+                                            <div class="text-xs text-gray-500">{{ $it['merk'] ?? $it['brand'] ?? '' }} — {{ $it['keterangan'] ?? $it['description'] ?? '' }}</div>
+                                        </div>
+                                        <div class="text-right w-48 text-sm text-gray-700">
+                                            <div>Jml: <strong>{{ $it['jumlah'] ?? $it['qty'] ?? 0 }}</strong></div>
+                                            <div>Harga Satuan: <strong>Rp {{ number_format(($it['harga_satuan'] ?? $it['harga'] ?? $it['unit_price'] ?? 0), 2, ',', '.') }}</strong></div>
+                                            <div>Total: <strong>Rp {{ number_format((($it['jumlah'] ?? $it['qty'] ?? 0) * ($it['harga_satuan'] ?? $it['harga'] ?? $it['unit_price'] ?? 0)), 2, ',', '.') }}</strong></div>
+                                        </div>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Management actions: only show approval/reject controls when at management step --}}
+                @if(Auth::user()->role === 'management' && $project->status === 'submitted_to_management')
+                    <div class="mt-6 border-t pt-6">
+                        <h4 class="font-bold mb-3">Tindakan Management</h4>
+                        <form action="{{ route('apps.management_approve', $project->id) }}" method="POST" class="flex items-center gap-3">
+                            @csrf @method('PATCH')
+                            <input type="text" name="catatan_management" placeholder="Catatan (opsional)" class="flex-1 text-sm border-gray-300 rounded-lg px-3 py-2">
+                            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold">ACC</button>
+                        </form>
+
+                        <form action="{{ route('apps.management_reject', $project->id) }}" method="POST" class="mt-3">
+                            @csrf @method('PATCH')
+                            <div class="flex gap-2">
+                                <input type="text" name="catatan_management" placeholder="Catatan penolakan (opsional)" class="flex-1 text-sm border-gray-300 rounded-lg px-3 py-2">
+                                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-bold">Tolak</button>
+                            </div>
+                        </form>
+                    </div>
+                @endif
+                {{-- Bendahara actions: show only ACC / Tolak buttons (no heading or notice) --}}
+                @if(Auth::user()->role === 'bendahara' && $project->status === 'submitted_to_bendahara')
+                    @php $proc = \App\Models\Procurement::where('app_request_id', $project->id)->first(); @endphp
+                    <div class="mt-6 border-t pt-6">
+                        <div class="flex items-center gap-3">
+                            @if(!$proc)
+                                <form action="{{ route('apps.bendahara_approve', $project->id) }}" method="POST" class="inline-block">
+                                    @csrf @method('PATCH')
+                                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold">ACC</button>
+                                </form>
+
+                                <form action="{{ route('apps.bendahara_reject', $project->id) }}" method="POST" class="inline-block">
+                                    @csrf @method('PATCH')
+                                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-bold">Tolak</button>
+                                </form>
+                            @else
+                                <form action="{{ route('bendahara.procurements.approve', $proc->id) }}" method="POST" class="inline-block mr-2">
+                                    @csrf @method('PATCH')
+                                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold">ACC</button>
+                                </form>
+
+                                <form action="{{ route('bendahara.procurements.reject', $proc->id) }}" method="POST" class="inline-block">
+                                    @csrf @method('PATCH')
+                                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-bold">Tolak</button>
+                                </form>
+                            @endif
+                        </div>
+                    </div>
+                @endif
             {{-- FITUR & CHECKLIST --}}
             @if(in_array($project->status, ['in_progress', 'completed']))
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -26,8 +26,15 @@ class AppRequestController extends Controller
     {
         $role = Auth::user()->role;
         
-        // Ambil yang statusnya masih menunggu (Pending Direktur atau Approved/Menunggu Admin)
-        $query = AppRequest::with('user')->whereIn('status', ['pending_director', 'approved']);
+        // Ambil yang statusnya masih menunggu (termasuk yang perlu diproses Admin/Management/Direktur)
+        $query = AppRequest::with('user')->whereIn('status', [
+            'submitted_to_admin',
+            'submitted_to_management',
+            'submitted_to_bendahara',
+            'submitted_to_director',
+            'pending_director',
+            'approved'
+        ]);
         
         //  hanya melihat miliknya
         if($role == 'kepala_ruang') {
@@ -87,27 +94,53 @@ class AppRequestController extends Controller
 
         $request->validate(['nama_aplikasi' => 'required', 'deskripsi' => 'required']);
 
-        $statusAwal = Auth::user()->role === 'direktur' ? 'approved' : 'pending_director';
+        $needsProcurement = $request->has('needs_procurement');
+
+        // If director creates directly, auto-approve as before. Otherwise start at Admin IT step.
+        $statusAwal = Auth::user()->role === 'direktur' ? 'approved' : 'submitted_to_admin';
         $catatanDirektur = Auth::user()->role === 'direktur' ? 'Auto-Approve by Director.' : null;
 
-        \App\Models\AppRequest::create([
-            'user_id' => Auth::id(),
-            'nama_aplikasi' => $request->nama_aplikasi,
-            'deskripsi' => $request->deskripsi,
-            'status' => $statusAwal,
-            'catatan_direktur' => $catatanDirektur
-        ]);
+        // Build requested items array if provided by Kepala Ruang
+        $requestedItems = null;
+        if ($needsProcurement) {
+            $names = $request->input('item_names', []);
+            $qtys = $request->input('item_qtys', []);
+            $items = [];
+            for ($i = 0; $i < count($names); $i++) {
+                $n = trim($names[$i] ?? '');
+                $q = intval($qtys[$i] ?? 0);
+                if ($n !== '') {
+                    $items[] = ['name' => $n, 'qty' => $q];
+                }
+            }
+            $requestedItems = $items ?: null;
+        }
+
+            $createData = [
+                'user_id' => Auth::id(),
+                'nama_aplikasi' => $request->nama_aplikasi,
+                'deskripsi' => $request->deskripsi,
+                'needs_procurement' => $needsProcurement,
+                'procurement_estimate' => null,
+            ];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('app_requests', 'requested_items')) {
+                $createData['requested_items'] = $requestedItems;
+            }
+            $createData['status'] = $statusAwal;
+            $createData['catatan_direktur'] = $catatanDirektur;
+
+            \App\Models\AppRequest::create($createData);
 
         // === PERUBAHAN DI SINI ===
         // Jika Kepala Ruang, kembali ke Dashboard Kepala Ruang
         if (Auth::user()->role === 'kepala_ruang') {
             return redirect()->route('kepala-ruang.apps.index')
-                ->with('success', 'Pengajuan berhasil dikirim ke Direktur.');
+            ->with('success', 'Pengajuan berhasil dikirim ke Admin IT.');
         }
 
         // Jika Direktur, kembali ke List Pending (atau halaman lain sesuai selera)
         return redirect()->route('apps.pending')
-                ->with('success', 'Permintaan terkirim langsung ke Admin IT.');
+            ->with('success', 'Permintaan terkirim langsung ke Admin IT.');
     }
 
     // === ADMIN: Update Checklist Fitur (Requirement No. 1 - Waktu Selesai) ===
@@ -166,6 +199,46 @@ class AppRequestController extends Controller
         return back()->with('success', 'Status pengajuan diperbarui.');
     }
 
+    // Management: Approve or forward app request
+    public function managementApprove(Request $request, $id)
+    {
+        if(Auth::user()->role !== 'management') abort(403);
+
+        $app = AppRequest::findOrFail($id);
+
+        // Save management note if provided and column exists
+        if ($request->filled('catatan_management') && \Illuminate\Support\Facades\Schema::hasColumn('app_requests', 'catatan_management')) {
+            $app->catatan_management = $request->catatan_management;
+        }
+
+        // If needs_procurement, forward to Bendahara, else to Director
+        if($app->needs_procurement) {
+            $app->status = 'submitted_to_bendahara';
+        } else {
+            $app->status = 'submitted_to_director';
+        }
+
+        $app->save();
+
+        return back()->with('success', 'Pengajuan berhasil diteruskan sesuai alur persetujuan.');
+    }
+
+    public function managementReject(Request $request, $id)
+    {
+        if(Auth::user()->role !== 'management') abort(403);
+
+        $app = AppRequest::findOrFail($id);
+        // Save optional note
+        if ($request->filled('catatan_management') && \Illuminate\Support\Facades\Schema::hasColumn('app_requests', 'catatan_management')) {
+            $app->catatan_management = $request->catatan_management;
+        }
+
+        $app->status = 'rejected';
+        $app->save();
+
+        return back()->with('success', 'Pengajuan berhasil ditolak oleh Management.');
+    }
+
     public function adminReview(Request $request, $id)
     {
         if(Auth::user()->role !== 'admin') abort(403);
@@ -180,6 +253,124 @@ class AppRequestController extends Controller
         ]);
 
         return back()->with('success', 'Status review admin diperbarui.');
+    }
+
+    // Admin IT processing step: input procurement estimate (if needed) and forward to Management or reject
+    public function adminProcess(Request $request, $id)
+    {
+        if(Auth::user()->role !== 'admin') abort(403);
+
+        $app = AppRequest::findOrFail($id);
+
+        if($request->action === 'reject') {
+            $app->status = 'rejected';
+            $app->catatan_admin = $request->catatan_admin ?? null;
+            $app->save();
+            return back()->with('success', 'Pengajuan ditolak oleh Admin IT.');
+        }
+
+        // action == forward
+
+        // If needs_procurement, allow admin to provide procurement_estimate and edit items
+        if($app->needs_procurement) {
+            // Accept structured requested_items from admin OR procurement-style `items`:
+            // - `requested_items` => array of numeric-indexed items with english keys (name, brand, qty, unit_price, description)
+            // - `items` => procurement-style items indexed by number with Indonesian keys (nama, merk, jumlah, harga_satuan, deskripsi)
+            $raw = $request->input('requested_items', []);
+            $items = [];
+
+            // If the admin submitted procurement-style `items[...]` (from procurement form), normalize it
+            if ($request->has('items') && is_array($request->input('items'))) {
+                $procItems = $request->input('items');
+                $raw = [];
+                foreach ($procItems as $pi) {
+                    // Move Indonesian keys into a normalized shape compatible with later logic
+                    $raw[] = [
+                        'nama' => $pi['nama'] ?? ($pi['name'] ?? ''),
+                        'merk' => $pi['merk'] ?? ($pi['brand'] ?? ''),
+                        'jumlah' => $pi['jumlah'] ?? ($pi['qty'] ?? 0),
+                        'harga_satuan' => $pi['harga_satuan'] ?? ($pi['unit_price'] ?? ($pi['harga'] ?? 0)),
+                        'keterangan' => $pi['deskripsi'] ?? ($pi['description'] ?? ''),
+                    ];
+                }
+            }
+            $total = 0;
+            if (is_array($raw)) {
+                foreach ($raw as $it) {
+                    $name = trim($it['name'] ?? $it['nama'] ?? '');
+                    if ($name === '') continue;
+
+                    // Normalize quantity (accept 'qty' or 'jumlah', various formats)
+                    $qtyRaw = $it['qty'] ?? $it['jumlah'] ?? 0;
+                    $qty = 0;
+                    if (is_numeric($qtyRaw)) {
+                        $qty = intval($qtyRaw);
+                    } elseif (is_string($qtyRaw)) {
+                        $clean = preg_replace('/[^0-9,.-]/', '', $qtyRaw);
+                        $clean = str_replace(',', '.', $clean);
+                        $qty = intval(floatval($clean));
+                    }
+
+                    // Normalize unit price (accept 'harga_satuan', 'unit_price', 'harga')
+                    $hargaRaw = $it['harga_satuan'] ?? $it['unit_price'] ?? $it['harga'] ?? 0;
+                    $harga = 0.0;
+                    if ($hargaRaw !== null && $hargaRaw !== '') {
+                        if (is_numeric($hargaRaw)) {
+                            $harga = floatval($hargaRaw);
+                        } elseif (is_string($hargaRaw)) {
+                            $clean = preg_replace('/[^0-9,.-]/', '', $hargaRaw);
+                            $clean = str_replace(',', '.', $clean);
+                            $harga = floatval($clean);
+                        }
+                    }
+
+                    $lineTotal = $qty * $harga;
+                    if ($lineTotal > 0) {
+                        $total += $lineTotal;
+                    }
+
+                    // Store both English and Indonesian keys for compatibility with other parts of the app
+                    $items[] = [
+                        // Indonesian keys (primary for procurement views)
+                        'nama' => $name,
+                        'merk' => trim($it['brand'] ?? $it['merk'] ?? ''),
+                        'jumlah' => $qty,
+                        'harga_satuan' => $harga,
+                        'keterangan' => trim($it['description'] ?? $it['keterangan'] ?? ''),
+                        // English keys (keep for older records / backward compatibility)
+                        'name' => $name,
+                        'brand' => trim($it['brand'] ?? $it['merk'] ?? ''),
+                        'qty' => $qty,
+                        'unit_price' => $harga,
+                        'description' => trim($it['description'] ?? $it['keterangan'] ?? '')
+                    ];
+                }
+            }
+
+            // Only set requested_items if the column exists in DB to avoid SQL errors
+            if (\Illuminate\Support\Facades\Schema::hasColumn('app_requests', 'requested_items')) {
+                $app->requested_items = $items ?: null;
+            }
+
+            // Use computed total if available, otherwise fall back to provided estimate
+            if ($total > 0) {
+                $app->procurement_estimate = $total;
+            } else {
+                if ($request->filled('procurement_estimate')) {
+                    $app->procurement_estimate = $request->procurement_estimate;
+                }
+            }
+        } else {
+            if ($request->filled('procurement_estimate')) {
+                $app->procurement_estimate = $request->procurement_estimate;
+            }
+        }
+
+        // Forward to Management for approval
+        $app->status = 'submitted_to_management';
+        $app->save();
+
+        return back()->with('success', 'Pengajuan berhasil diproses dan diteruskan ke Management.');
     }
 
     public function addFeature(Request $request, $id)
@@ -599,6 +790,44 @@ public function managementReports(Request $request)
         $proc->save();
 
         return back()->with('success', 'Pengadaan berhasil ditolak oleh Bendahara.');
+    }
+
+    // Bendahara: Approve/Reject directly on AppRequest when no Procurement record exists
+    public function bendaharaApproveAppRequest(Request $request, $id)
+    {
+        if(Auth::user()->role !== 'bendahara') abort(403);
+
+        $app = AppRequest::findOrFail($id);
+
+        // Save optional note to a bendahara-specific column if present, otherwise to catatan_management if available
+        if ($request->filled('catatan') && \Illuminate\Support\Facades\Schema::hasColumn('app_requests', 'catatan_bendahara')) {
+            $app->catatan_bendahara = $request->catatan;
+        } elseif ($request->filled('catatan') && \Illuminate\Support\Facades\Schema::hasColumn('app_requests', 'catatan_management')) {
+            $app->catatan_management = $request->catatan;
+        }
+
+        $app->status = 'submitted_to_director';
+        $app->save();
+
+        return back()->with('success', 'Pengajuan berhasil diteruskan ke Direktur.');
+    }
+
+    public function bendaharaRejectAppRequest(Request $request, $id)
+    {
+        if(Auth::user()->role !== 'bendahara') abort(403);
+
+        $app = AppRequest::findOrFail($id);
+
+        if ($request->filled('catatan') && \Illuminate\Support\Facades\Schema::hasColumn('app_requests', 'catatan_bendahara')) {
+            $app->catatan_bendahara = $request->catatan;
+        } elseif ($request->filled('catatan') && \Illuminate\Support\Facades\Schema::hasColumn('app_requests', 'catatan_management')) {
+            $app->catatan_management = $request->catatan;
+        }
+
+        $app->status = 'rejected';
+        $app->save();
+
+        return back()->with('success', 'Pengajuan berhasil ditolak oleh Bendahara.');
     }
 
     public function exportSingleAppPdf($id)

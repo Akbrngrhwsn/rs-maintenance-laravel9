@@ -45,12 +45,47 @@
                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" 
                       placeholder="Jelaskan fungsi utama aplikasi ini..."></textarea>
         </div>
+
+        {{-- Pengadaan (sama persis dengan komponen di Laporan Kerusakan) --}}
+        <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <label class="inline-flex items-center">
+                <input type="checkbox" id="checkProcurement" name="needs_procurement" value="1" 
+                    class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500">
+                <span class="ml-2 text-sm font-semibold text-blue-800">Ajukan Pengadaan Barang Langsung</span>
+            </label>
+        </div>
+
+        <div id="procurementForm" class="hidden mt-2 p-4 bg-white border border-blue-200 rounded-lg shadow-inner">
+            <h4 class="text-sm font-bold text-gray-700 mb-2">Daftar Barang yang Dibutuhkan:</h4>
+            <div id="itemsContainer">
+                <div class="flex gap-2 mb-2 item-row">
+                    <input type="text" name="item_names[]" placeholder="Nama Barang (contoh: Mouse Logitech)" class="flex-1 rounded-md border-gray-300 text-sm">
+                    <input type="number" name="item_qtys[]" placeholder="Jml" class="w-20 rounded-md border-gray-300 text-sm">
+                </div>
+            </div>
+            <button type="button" onclick="addItemRow()" class="text-xs text-blue-600 font-medium">+ Tambah Barang Lain</button>
+        </div>
+
+        <script>
+            const checkbox = document.getElementById('checkProcurement');
+            const form = document.getElementById('procurementForm');
+
+            if(checkbox) checkbox.addEventListener('change', function() {
+                form.classList.toggle('hidden', !this.checked);
+            });
+
+            function addItemRow() {
+                const row = document.querySelector('.item-row').cloneNode(true);
+                row.querySelectorAll('input').forEach(input => input.value = '');
+                document.getElementById('itemsContainer').appendChild(row);
+            }
+        </script>
     </div>
 
     {{-- Tombol Aksi --}}
     <div class="mt-6 flex justify-end">
         <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow transition duration-150 ease-in-out flex items-center gap-2">
-            <span>Kirim ke Direktur</span>
+            <span>Kirim</span>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
             </svg>

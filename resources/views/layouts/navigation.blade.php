@@ -73,6 +73,10 @@
                         <x-nav-link :href="route('management.reports')" :active="request()->routeIs('management.reports')" class="text-sm font-bold tracking-tight">
                             {{ __('Monitoring Laporan') }}
                         </x-nav-link>
+                        <x-nav-link :href="route('apps.index')" :active="request()->routeIs('apps.*')" class="text-sm font-bold tracking-tight">
+                            {{ __('Projek Aplikasi') }}
+                            <span id="badge-management-apps" class="ml-2 px-2 py-0.5 text-xs rounded-full bg-blue-600 text-white hidden">0</span>
+                        </x-nav-link>
                         <x-nav-link :href="route('management.procurements')" :active="request()->routeIs('management.procurements')" class="text-sm font-bold tracking-tight">
                             {{ __('Persetujuan Pengadaan') }}
                             <span id="badge-management-procurements" class="ml-2 px-2 py-0.5 text-xs rounded-full bg-emerald-600 text-white hidden">0</span>
@@ -89,6 +93,10 @@
                     @if(Auth::check() && Auth::user()->role === 'bendahara')
                         <x-nav-link :href="route('bendahara.reports')" :active="request()->routeIs('bendahara.reports')" class="text-sm font-bold tracking-tight">
                             {{ __('Monitoring Laporan') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('apps.index')" :active="request()->routeIs('apps.*')" class="text-sm font-bold tracking-tight">
+                            {{ __('Projek Aplikasi') }}
+                            <span id="badge-bendahara-apps" class="ml-2 px-2 py-0.5 text-xs rounded-full bg-blue-600 text-white hidden">0</span>
                         </x-nav-link>
                         <x-nav-link :href="route('bendahara.procurements.index')" :active="request()->routeIs('bendahara.procurements.*')" class="text-sm font-bold tracking-tight">
                             {{ __('Validasi Keuangan') }}
@@ -264,6 +272,9 @@
                     <x-responsive-nav-link :href="route('management.reports')" :active="request()->routeIs('management.reports')" class="rounded-lg font-bold">
                         {{ __('Monitoring Laporan') }}
                     </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('apps.index')" :active="request()->routeIs('apps.*')" class="rounded-lg font-bold">
+                        {{ __('Projek Aplikasi') }}
+                    </x-responsive-nav-link>
                     <x-responsive-nav-link :href="route('management.procurements')" :active="request()->routeIs('management.procurements')" class="rounded-lg font-bold">
                         {{ __('Persetujuan Pengadaan') }}
                     </x-responsive-nav-link>
@@ -279,6 +290,9 @@
                 @if(Auth::user()->role === 'bendahara')
                     <x-responsive-nav-link :href="route('bendahara.reports')" :active="request()->routeIs('bendahara.reports')" class="rounded-lg font-bold">
                         {{ __('Monitoring Laporan') }}
+                    </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('apps.index')" :active="request()->routeIs('apps.*')" class="rounded-lg font-bold">
+                        {{ __('Projek Aplikasi') }}
                     </x-responsive-nav-link>
                     <x-responsive-nav-link :href="route('bendahara.procurements.index')" :active="request()->routeIs('bendahara.procurements.*')" class="rounded-lg font-bold">
                         {{ __('Validasi Keuangan') }}
