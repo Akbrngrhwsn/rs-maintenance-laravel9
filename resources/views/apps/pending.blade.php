@@ -24,33 +24,7 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            {{-- Tombol Buat Request (Hanya kepala ruang/Direktur) --}}
-            @if(in_array(Auth::user()->role, ['kepala_ruang', 'direktur']))
-            <div class="mb-6 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-    <h3 class="font-bold mb-4 text-gray-800">Ajukan Request Baru</h3>
-    <form action="{{ route('apps.store') }}" method="POST" class="space-y-4">
-        @csrf
-        
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Nama Aplikasi</label>
-            <input type="text" name="nama_aplikasi" placeholder="Contoh: SIM-RS" 
-                   class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
-        </div>
-
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi Singkat</label>
-            <textarea name="deskripsi" rows="3" placeholder="Jelaskan kebutuhan aplikasi..." 
-                      class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
-        </div>
-
-        <div class="flex justify-end">
-            <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium transition-colors">
-                Kirim Request
-            </button>
-        </div>
-    </form>
-</div>
-            @endif
+            
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <table class="min-w-full divide-y divide-gray-200">
