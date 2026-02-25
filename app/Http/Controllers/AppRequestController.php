@@ -1084,4 +1084,38 @@ public function managementReports(Request $request)
 
     return $pdf->download('Laporan_Aplikasi_' . $startDate->format('M_Y') . '.pdf');
 }
+
+// === Download Procurement Report as PDF ===
+public function downloadProcurementReport($id)
+{
+    $project = AppRequest::with(['user', 'features'])->findOrFail($id);
+    
+    // Check if has procurement data
+    if (!$project->needs_procurement) {
+        return back()->with('error', 'Aplikasi ini tidak memiliki pengadaan.');
+    }
+
+    // Get procurement data from app_request
+    $procurementItems = is_array($project->requested_items) ? $project->requested_items : (
+        is_string($project->requested_items) && $project->requested_items !== '' 
+            ? @json_decode($project->requested_items, true) 
+            : []
+    );
+
+    $procurementTotal = $project->procurement_estimate ?? 0;
+
+    // Generate QR code for validation (URL yang mengarah ke halaman detail)
+    $validationUrl = route('apps.show', $project->id);
+    $qrCode = base64_encode(QrCode::format('png')->size(150)->generate($validationUrl));
+
+    $pdf = Pdf::loadView('pdf.procurement-report', [
+        'project' => $project,
+        'items' => $procurementItems,
+        'total' => $procurementTotal,
+        'qrCode' => $qrCode,
+        'generatedDate' => Carbon::now()
+    ]);
+
+    return $pdf->download('Laporan_Pengadaan_' . $project->ticket_number . '_' . now()->format('d-m-Y') . '.pdf');
+}
 }

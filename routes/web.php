@@ -152,6 +152,9 @@ Route::middleware('auth')->group(function () {
         // TAMBAHKAN INI: Route untuk download PDF per aplikasi
         Route::get('/detail/{id}/export', [AppRequestController::class, 'exportSingleAppPdf'])->name('apps.export.single');
         
+        // Route untuk download laporan pengadaan
+        Route::get('/detail/{id}/procurement/export', [AppRequestController::class, 'downloadProcurementReport'])->name('apps.procurement.export');
+        
         // --- ACTION ROUTES (Form Submit & Process) ---
         
         // Khusus Kepala Ruang: Buat Request

@@ -336,7 +336,18 @@
                 @endphp
 
                 <div class="mt-6 border-t pt-6">
-                    <h4 class="font-bold mb-3">Rincian Pengajuan & Pengadaan</h4>
+                    <div class="flex flex-col md:flex-row justify-between items-start gap-4 mb-4">
+                        <h4 class="font-bold mb-0">Rincian Pengajuan & Pengadaan</h4>
+                        @if($project->needs_procurement)
+                            <a href="{{ route('apps.procurement.export', $project->id) }}" target="_blank" 
+                               class="inline-flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold rounded-lg shadow transition gap-2 whitespace-nowrap">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                Unduh Laporan Pengadaan
+                            </a>
+                        @endif
+                    </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div class="md:col-span-2 bg-white border rounded-lg p-4">
