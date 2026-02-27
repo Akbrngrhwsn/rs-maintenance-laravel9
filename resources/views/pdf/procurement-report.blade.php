@@ -69,7 +69,7 @@
         </tr>
     </table>
 
-    {{-- INFO DATA --}}
+   {{-- INFO DATA --}}
     <div style="margin-bottom: 20px;">
         <table style="border: none;">
             <tr class="border-none">
@@ -80,7 +80,10 @@
             <tr class="border-none">
                 <td class="border-none">Unit Pemohon</td>
                 <td class="border-none">:</td>
-                <td class="border-none">{{ $project->room->name ?? '-' }} ({{ $project->user->name ?? '-' }})</td>
+                {{-- Menggunakan relasi user ke room jika tersedia di model User --}}
+                <td class="border-none">
+                    {{ $project->user->room->name ?? '-' }} ({{ $project->user->name ?? '-' }})
+                </td>
             </tr>
         </table>
     </div>
@@ -156,100 +159,100 @@
     @endif
 
     {{-- Area Tanda Tangan Validasi Bertahap --}}
-<div style="margin-top: 30px;">
-    <table style="width: 100%; border: none; table-layout: fixed;">
-        <tr style="border: none;">
-            
-            {{-- 1. KEPALA RUANG --}}
-            <td class="text-center" style="border: none; vertical-align: top;">
-                <p style="font-weight: bold; margin-bottom: 5px; font-size: 9pt;">Kepala Ruang</p>
-                <div style="height: 70px; margin: 0 auto 5px; width: 70px;">
-                    @if(!empty($qrCodes['kepala_ruang']))
-                        <img src="data:image/png;base64,{{ $qrCodes['kepala_ruang'] }}" style="width: 100%;">
-                    @else
-                        <div style="height: 65px; border: 1px dashed #ccc;"></div>
-                    @endif
-                </div>
-                <span style="font-size: 8pt; border-top: 1px solid #000; display: block; padding-top: 2px; margin: 0 10px;">
-                    {{ $project->user->name ?? 'Pemohon' }}
-                </span>
-            </td>
+    <div style="margin-top: 30px;">
+        <table style="width: 100%; border: none; table-layout: fixed;">
+            <tr style="border: none;">
+                
+                {{-- 1. KEPALA RUANG --}}
+                <td class="text-center" style="border: none; vertical-align: top;">
+                    <p style="font-weight: bold; margin-bottom: 5px; font-size: 9pt;">Kepala Ruang</p>
+                    <div style="height: 70px; margin: 0 auto 5px; width: 70px;">
+                        @if(!empty($qrCodes['kepala_ruang']))
+                            <img src="data:image/png;base64,{{ $qrCodes['kepala_ruang'] }}" style="width: 100%;">
+                        @else
+                            <div style="height: 65px; border: 1px dashed #ccc;"></div>
+                        @endif
+                    </div>
+                    <span style="font-size: 8pt; border-top: 1px solid #000; display: block; padding-top: 2px; margin: 0 10px;">
+                        {{ $project->user->name ?? 'Pemohon' }}
+                    </span>
+                </td>
 
-            {{-- 2. ADMIN IT --}}
-            <td class="text-center" style="border: none; vertical-align: top;">
-                <p style="font-weight: bold; margin-bottom: 5px; font-size: 9pt;">Admin IT</p>
-                <div style="height: 70px; margin: 0 auto 5px; width: 70px;">
-                    {{-- QR Admin IT muncul jika estimasi biaya sudah diisi --}}
-                    @if(!empty($project->procurement_estimate) && !empty($qrCodes['admin_it']))
-                        <img src="data:image/png;base64,{{ $qrCodes['admin_it'] }}" style="width: 100%;">
-                    @else
-                        <div style="height: 65px; border: 1px dashed #ccc;"></div>
-                    @endif
-                </div>
-                <span style="font-size: 8pt; border-top: 1px solid #000; display: block; padding-top: 2px; margin: 0 10px;">
-                    Admin IT
-                </span>
-            </td>
+                {{-- 2. ADMIN IT --}}
+                <td class="text-center" style="border: none; vertical-align: top;">
+                    <p style="font-weight: bold; margin-bottom: 5px; font-size: 9pt;">Admin IT</p>
+                    <div style="height: 70px; margin: 0 auto 5px; width: 70px;">
+                        {{-- QR Admin IT muncul jika estimasi biaya sudah diisi --}}
+                        @if(!empty($project->procurement_estimate) && !empty($qrCodes['admin_it']))
+                            <img src="data:image/png;base64,{{ $qrCodes['admin_it'] }}" style="width: 100%;">
+                        @else
+                            <div style="height: 65px; border: 1px dashed #ccc;"></div>
+                        @endif
+                    </div>
+                    <span style="font-size: 8pt; border-top: 1px solid #000; display: block; padding-top: 2px; margin: 0 10px;">
+                        Admin IT
+                    </span>
+                </td>
 
-            {{-- 3. MANAGEMENT --}}
-            <td class="text-center" style="border: none; vertical-align: top;">
-                <p style="font-weight: bold; margin-bottom: 5px; font-size: 9pt;">Management</p>
-                <div style="height: 70px; margin: 0 auto 5px; width: 70px;">
-                    @php
-                        // List status setelah Management menyetujui
-                        $afterManagement = ['submitted_to_bendahara', 'submitted_to_director', 'approved', 'completed'];
-                    @endphp
-                    {{-- QR muncul jika status sudah melewati management --}}
-                    @if(in_array($project->procurement_approval_status, $afterManagement) && !empty($qrCodes['management']))
-                        <img src="data:image/png;base64,{{ $qrCodes['management'] }}" style="width: 100%;">
-                    @else
-                        <div style="height: 65px; border: 1px dashed #ccc;"></div>
-                    @endif
-                </div>
-                <span style="font-size: 8pt; border-top: 1px solid #000; display: block; padding-top: 2px; margin: 0 10px;">
-                    {{ $project->management_name ?? 'Management' }}
-                </span>
-            </td>
+                {{-- 3. MANAGEMENT --}}
+                <td class="text-center" style="border: none; vertical-align: top;">
+                    <p style="font-weight: bold; margin-bottom: 5px; font-size: 9pt;">Management</p>
+                    <div style="height: 70px; margin: 0 auto 5px; width: 70px;">
+                        @php
+                            // List status setelah Management menyetujui
+                            $afterManagement = ['submitted_to_bendahara', 'submitted_to_director', 'approved', 'completed'];
+                        @endphp
+                        {{-- QR muncul jika status sudah melewati management --}}
+                        @if(in_array($project->procurement_approval_status, $afterManagement) && !empty($qrCodes['management']))
+                            <img src="data:image/png;base64,{{ $qrCodes['management'] }}" style="width: 100%;">
+                        @else
+                            <div style="height: 65px; border: 1px dashed #ccc;"></div>
+                        @endif
+                    </div>
+                    <span style="font-size: 8pt; border-top: 1px solid #000; display: block; padding-top: 2px; margin: 0 10px;">
+                        {{ $project->management_name ?? 'Management' }}
+                    </span>
+                </td>
 
-            {{-- 4. BENDAHARA --}}
-            <td class="text-center" style="border: none; vertical-align: top;">
-                <p style="font-weight: bold; margin-bottom: 5px; font-size: 9pt;">Bendahara</p>
-                <div style="height: 70px; margin: 0 auto 5px; width: 70px;">
-                    @php
-                        // List status setelah Bendahara menyetujui
-                        $afterBendahara = ['submitted_to_director', 'approved', 'completed'];
-                    @endphp
-                    {{-- QR muncul jika status sudah melewati bendahara --}}
-                    @if(in_array($project->procurement_approval_status, $afterBendahara) && !empty($qrCodes['bendahara']))
-                        <img src="data:image/png;base64,{{ $qrCodes['bendahara'] }}" style="width: 100%;">
-                    @else
-                        <div style="height: 65px; border: 1px dashed #ccc;"></div>
-                    @endif
-                </div>
-                <span style="font-size: 8pt; border-top: 1px solid #000; display: block; padding-top: 2px; margin: 0 10px;">
-                    Bag. Keuangan
-                </span>
-            </td>
+                {{-- 4. BENDAHARA --}}
+                <td class="text-center" style="border: none; vertical-align: top;">
+                    <p style="font-weight: bold; margin-bottom: 5px; font-size: 9pt;">Bendahara</p>
+                    <div style="height: 70px; margin: 0 auto 5px; width: 70px;">
+                        @php
+                            // List status setelah Bendahara menyetujui
+                            $afterBendahara = ['submitted_to_director', 'approved', 'completed'];
+                        @endphp
+                        {{-- QR muncul jika status sudah melewati bendahara --}}
+                        @if(in_array($project->procurement_approval_status, $afterBendahara) && !empty($qrCodes['bendahara']))
+                            <img src="data:image/png;base64,{{ $qrCodes['bendahara'] }}" style="width: 100%;">
+                        @else
+                            <div style="height: 65px; border: 1px dashed #ccc;"></div>
+                        @endif
+                    </div>
+                    <span style="font-size: 8pt; border-top: 1px solid #000; display: block; padding-top: 2px; margin: 0 10px;">
+                        Bag. Keuangan
+                    </span>
+                </td>
 
-            {{-- 5. DIREKTUR --}}
-            <td class="text-center" style="border: none; vertical-align: top;">
-                <p style="font-weight: bold; margin-bottom: 5px; font-size: 9pt;">Direktur</p>
-                <div style="height: 70px; margin: 0 auto 5px; width: 70px;">
-                    {{-- QR muncul jika status final disetujui atau ditolak --}}
-                    @if(in_array($project->procurement_approval_status, ['approved', 'completed', 'rejected']) && !empty($qrCodes['direktur']))
-                        <img src="data:image/png;base64,{{ $qrCodes['direktur'] }}" style="width: 100%;">
-                    @else
-                        <div style="height: 65px; border: 1px dashed #ccc;"></div>
-                    @endif
-                </div>
-                <span style="font-size: 8pt; border-top: 1px solid #000; display: block; padding-top: 2px; margin: 0 10px;">
-                    Direktur Utama
-                </span>
-            </td>
+                {{-- 5. DIREKTUR --}}
+                <td class="text-center" style="border: none; vertical-align: top;">
+                    <p style="font-weight: bold; margin-bottom: 5px; font-size: 9pt;">Direktur</p>
+                    <div style="height: 70px; margin: 0 auto 5px; width: 70px;">
+                        {{-- QR muncul jika status final disetujui atau ditolak --}}
+                        @if(in_array($project->procurement_approval_status, ['approved', 'completed', 'rejected']) && !empty($qrCodes['direktur']))
+                            <img src="data:image/png;base64,{{ $qrCodes['direktur'] }}" style="width: 100%;">
+                        @else
+                            <div style="height: 65px; border: 1px dashed #ccc;"></div>
+                        @endif
+                    </div>
+                    <span style="font-size: 8pt; border-top: 1px solid #000; display: block; padding-top: 2px; margin: 0 10px;">
+                        Direktur Utama
+                    </span>
+                </td>
 
-        </tr>
-    </table>
-</div>
+            </tr>
+        </table>
+    </div>
 
     <div style="position: fixed; bottom: 0; width: 100%; font-size: 8pt; text-align: center; color: #777;">
         Dokumen ini dicetak otomatis melalui Sistem RS Maintenance pada {{ date('d/m/Y H:i') }}

@@ -796,50 +796,67 @@ class AppRequestController extends Controller
     return $pdf->download('Laporan_Aplikasi_' . $startDate->format('M_Y') . '.pdf');
 }
 
-// === Download Procurement Report as PDF ===
 // app/Http/Controllers/AppRequestController.php
 
 public function downloadProcurementReport($id)
 {
-    $app = AppRequest::findOrFail($id);
-    $s = $app->procurement_status; // Pastikan menggunakan kolom status yang tepat
+    // 1. Ambil data project beserta relasinya
+    $project = AppRequest::with(['user'])->findOrFail($id);
+    
+    // 2. Gunakan kolom status yang benar sesuai database Anda
+    $s = $project->procurement_approval_status; 
 
     $generateQr = function($text) {
         return base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')
             ->size(100)->margin(0)->generate($text));
     };
 
-    // Inisialisasi string kosong agar tidak error di Blade
-    $qrAdmin = $generateQr("Diajukan Admin IT. App: " . $app->app_name);
+    // 3. Inisialisasi variabel QR dengan string kosong (estafet)
+    $qrAdmin = $generateQr("Diajukan Admin IT. Proyek: " . $project->nama_aplikasi);
+    $qrKapro = $generateQr("Diajukan oleh Kepala Ruang: " . ($project->user->name ?? '-'));
     $qrManagement = '';
     $qrBendahara = '';
     $qrDirektur = '';
 
-    // LOGIKA ESTAFET: QR tetap ada jika status sudah melewati tahap tersebut
+    // 4. LOGIKA ESTAFET: QR tetap ada jika status sudah melewati atau berada di tahap tersebut
     
-    // Management sudah setuju jika status sudah masuk ke bendahara, direktur, atau selesai
-    if (in_array($s, ['submitted_to_bendahara', 'submitted_to_director', 'approved_by_director', 'completed'])) {
-        $qrManagement = $generateQr("Divalidasi Management. ID: " . $app->id);
+    // Management muncul jika status sudah masuk ke Bendahara, Direktur, atau Final
+    $afterManagement = ['submitted_to_bendahara', 'submitted_to_director', 'approved', 'completed'];
+    if (in_array($s, $afterManagement)) {
+        $qrManagement = $generateQr("Divalidasi Management. Tanggal: " . now()->format('d/m/Y'));
     }
 
-    // Bendahara sudah setuju jika status sudah di tangan direktur atau selesai
-    if (in_array($s, ['submitted_to_director', 'approved_by_director', 'completed'])) {
+    // Bendahara muncul jika status sudah masuk ke Direktur atau Final
+    $afterBendahara = ['submitted_to_director', 'approved', 'completed'];
+    if (in_array($s, $afterBendahara)) {
         $qrBendahara = $generateQr("Diverifikasi Bendahara. Anggaran Tersedia.");
     }
 
-    // Direktur muncul hanya jika sudah final
-    if (in_array($s, ['approved_by_director', 'completed'])) {
-        $qrDirektur = $generateQr("Disetujui Direktur Utama.");
+    // Direktur muncul jika status sudah Final (Approved/Completed)
+    $afterDirector = ['approved', 'completed'];
+    if (in_array($s, $afterDirector)) {
+        $qrDirektur = $generateQr("Disetujui Direktur Utama. " . now()->format('d/m/Y'));
     }
 
+    // 5. Bungkus dalam array $qrCodes agar sesuai dengan variabel di blade (procurement-report.blade.php)
+    $qrCodes = [
+        'kepala_ruang' => $qrKapro,
+        'admin_it'     => $qrAdmin,
+        'management'   => $qrManagement,
+        'bendahara'    => $qrBendahara,
+        'direktur'     => $qrDirektur
+    ];
+
+    // 6. Kirim variabel yang dibutuhkan oleh blade
     $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.procurement-report', [
-        'app' => $app,
-        'qrAdmin' => $qrAdmin,
-        'qrManagement' => $qrManagement,
-        'qrBendahara' => $qrBendahara,
-        'qrDirektur' => $qrDirektur,
+        'project' => $project,
+        'items'   => $project->requested_items ?? [],
+        'qrCodes' => $qrCodes,
     ]);
 
-    return $pdf->download('laporan-pengadaan-aplikasi.pdf');
+    // Set Paper A4
+    $pdf->setPaper('A4');
+
+    return $pdf->download('laporan-pengadaan-' . \Illuminate\Support\Str::slug($project->nama_aplikasi) . '.pdf');
 }
 }
