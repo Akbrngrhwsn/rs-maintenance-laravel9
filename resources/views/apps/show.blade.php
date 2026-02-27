@@ -169,12 +169,10 @@
                 {{-- TOMBOL AKSI (Approve Direktur / Review Admin) --}}
                 @if(Auth::user()->role === 'direktur' && in_array($project->status, ['pending_director', 'submitted_to_director']))
                     <div class="mt-6 border-t pt-6">
-                        <form action="{{ route('apps.approve', $project->id) }}" method="POST" class="flex gap-3 items-center w-full">
-                            @csrf @method('PATCH')
-                            <input type="text" name="catatan" placeholder="Catatan persetujuan (opsional)..." class="text-sm border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 flex-1">
-                            <button type="submit" name="status" value="terima" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg text-sm font-bold shadow transition">ACC</button>
-                            <button type="button" onclick="openRejectModal('{{ route('apps.approve', $project->id) }}', 'catatan', {status: 'tolak'}, 'Tolak Aplikasi')" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg text-sm font-bold shadow transition">Tolak</button>
-                        </form>
+                        {{-- Untuk role direktur: hanya tampilkan kolom catatan tanpa tombol ACC/Tolak --}}
+                        <div class="flex items-center w-full">
+                            <input type="text" name="catatan" placeholder="Catatan persetujuan (opsional)..." class="text-sm border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 flex-1" disabled>
+                        </div>
                     </div>
                 @endif
                 
