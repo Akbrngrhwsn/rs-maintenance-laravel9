@@ -23,16 +23,18 @@ class NotificationController extends Controller
         // --- ADMIN (Tetap) ---
         if ($role === 'admin') {
             $reportCount = Report::where('status', 'Belum Diproses')->count();
-            $appCount = AppRequest::where('status', 'approved')->count();
+            // Hitung AppRequest yang baru masuk ke alur Admin IT
+            $appCount = AppRequest::where('status', 'submitted_to_admin')->count();
 
             $response['counts'] = [
                 'reports' => $reportCount,
                 'apps' => $appCount
             ];
         } 
-        // --- DIREKTUR (Tetap) ---
+        // --- DIREKTUR (TAMBAHAN: tangani submitted_to_director dan pending_director) ---
         elseif ($role === 'direktur') {
-            $pendingApps = AppRequest::where('status', 'pending_director')->count();
+            // Direktur perlu diberitahu jika ada app request yang dikirim ke direktur
+            $pendingApps = AppRequest::whereIn('status', ['submitted_to_director', 'pending_director'])->count();
             $pendingProcurements = Procurement::where('status', 'submitted_to_director')->count();
 
             $response['counts'] = [
@@ -41,6 +43,21 @@ class NotificationController extends Controller
             ];
 
             if($pendingApps > 0 || $pendingProcurements > 0) $response['has_notification'] = true;
+        }
+
+        // --- MANAGEMENT (BARU) ---
+        elseif ($role === 'management') {
+            // Management harus melihat AppRequest yang diteruskan dari Admin
+            $appsForManagement = AppRequest::where('status', 'submitted_to_management')->count();
+            // dan juga pengadaan yang dialihkan ke management (jika ada)
+            $procurementsForManagement = Procurement::where('status', 'submitted_to_management')->count();
+
+            $response['counts'] = [
+                'submitted_apps' => $appsForManagement,
+                'submitted_procurements' => $procurementsForManagement,
+            ];
+
+            if($appsForManagement > 0 || $procurementsForManagement > 0) $response['has_notification'] = true;
         }
         // --- MANA(BARU) ---
         elseif ($role === 'kepala_ruang') {
@@ -64,9 +81,9 @@ class NotificationController extends Controller
         }
         // --- BENDAHARA (UPDATE) ---
         elseif ($role === 'bendahara') {
-            // Bendahara memantau pengadaan dari
-            $pendingProcurements = Procurement::where('status', 'submitted_to_bendahara')->count();
-            
+            // Bendahara memvalidasi pengadaan untuk AppRequest — gunakan kolom procurement_approval_status
+            $pendingProcurements = AppRequest::where('procurement_approval_status', 'submitted_to_bendahara')->count();
+
             $response['counts'] = [
                 'pending_procurements' => $pendingProcurements,
             ];

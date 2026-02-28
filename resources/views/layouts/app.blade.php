@@ -74,10 +74,10 @@
                                     if(currentPath.includes('/admin/dashboard')) needReload = true;
                                 }
                                 else if (currentApps > lastApps) {
-                                    title = '🔔 Tugas Aplikasi!';
-                                    message = 'Direktur menyetujui request baru.';
+                                    title = '🔔 Request Aplikasi Baru';
+                                    message = 'Ada request aplikasi baru masuk.';
                                     shouldNotify = true;
-                                    if(currentPath.includes('/apps')) needReload = true;
+                                    if(currentPath.includes('/apps') || currentPath.includes('/admin/apps')) needReload = true;
                                 }
                                 
                                 lastCounts.reports = currentReports;
@@ -92,22 +92,46 @@
                                 const lastPendingProc = lastCounts.pending_procurements || 0;
 
                                 if (currentPendingApps > lastPendingApps) {
-                                    title = '📩 Pengajuan Baru';
-                                    message = 'Kepala ruang mengajukan aplikasi baru.';
+                                    title = '📩 Permintaan Aplikasi ke Direktur';
+                                    message = 'Ada aplikasi yang diteruskan ke Direktur untuk persetujuan.';
                                     shouldNotify = true;
-                                    if(currentPath.includes('/kepala-ruang/apps')) needReload = true;
+                                    if(currentPath.includes('/director/reports') || currentPath.includes('/director/')) needReload = true;
                                 }
 
                                 if (currentPendingProc > lastPendingProc) {
-                                    title = '📦 Pengadaan Baru';
-                                    message = 'Admin IT mengajukan pengadaan baru.';
+                                    title = '📦 Pengadaan untuk Direktur';
+                                    message = 'Ada pengajuan pengadaan yang butuh persetujuan Direktur.';
                                     shouldNotify = true;
-                                    // Jika sedang di halaman pengadaan, reload
                                     if(currentPath.includes('/director/procurements')) needReload = true;
                                 }
 
                                 lastCounts.pending_apps = currentPendingApps;
                                 lastCounts.pending_procurements = currentPendingProc;
+                            }
+
+                            // === LOGIKA MANAGEMENT (BARU) ===
+                            else if (data.role === 'management') {
+                                const currentSubmittedApps = data.counts.submitted_apps || 0;
+                                const lastSubmittedApps = lastCounts.submitted_apps || 0;
+                                const currentSubmittedProc = data.counts.submitted_procurements || 0;
+                                const lastSubmittedProc = lastCounts.submitted_procurements || 0;
+
+                                if (currentSubmittedApps > lastSubmittedApps) {
+                                    title = '📨 Aplikasi Masuk ke Management';
+                                    message = 'Admin IT meneruskan request aplikasi ke Management.';
+                                    shouldNotify = true;
+                                    if(currentPath.includes('/management/reports') || currentPath.includes('/management')) needReload = true;
+                                }
+
+                                if (currentSubmittedProc > lastSubmittedProc) {
+                                    title = '📥 Pengadaan untuk Management';
+                                    message = 'Ada pengajuan pengadaan yang masuk ke Management.';
+                                    shouldNotify = true;
+                                    if(currentPath.includes('/management/procurements')) needReload = true;
+                                }
+
+                                lastCounts.submitted_apps = currentSubmittedApps;
+                                lastCounts.submitted_procurements = currentSubmittedProc;
                             }
 
                             // === LOGIKA  (BARU) ===
