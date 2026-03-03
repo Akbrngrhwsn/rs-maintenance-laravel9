@@ -41,7 +41,8 @@
             document.addEventListener('DOMContentLoaded', function() {
                 const checkInterval = 10000; // Cek setiap 10 detik
                 const sound = document.getElementById('notifSound');
-                let lastCounts = JSON.parse(sessionStorage.getItem('notifCounts')) || {};
+                let lastCounts = {};
+                let isFirstCheck = true;
 
                 // Fungsi untuk update badges di navbar
                 function updateNavbarBadges(role, counts) {
@@ -128,25 +129,31 @@
                         const procBadge = document.getElementById('badge-bendahara-procurements');
                         const requestAppBadge = document.getElementById('badge-bendahara-request-apps');
                         
-                        if (counts.request_apps > 0) {
-                            requestAppBadge.textContent = counts.request_apps;
-                            requestAppBadge.classList.remove('hidden');
-                        } else {
-                            requestAppBadge.classList.add('hidden');
+                        if (requestAppBadge) {
+                            if (counts.request_apps > 0) {
+                                requestAppBadge.textContent = counts.request_apps;
+                                requestAppBadge.classList.remove('hidden');
+                            } else {
+                                requestAppBadge.classList.add('hidden');
+                            }
                         }
 
-                        if (counts.apps > 0) {
-                            appBadge.textContent = counts.apps;
-                            appBadge.classList.remove('hidden');
-                        } else {
-                            appBadge.classList.add('hidden');
+                        if (appBadge) {
+                            if (counts.apps > 0) {
+                                appBadge.textContent = counts.apps;
+                                appBadge.classList.remove('hidden');
+                            } else {
+                                appBadge.classList.add('hidden');
+                            }
                         }
 
-                        if (counts.pending_procurements > 0) {
-                            procBadge.textContent = counts.pending_procurements;
-                            procBadge.classList.remove('hidden');
-                        } else {
-                            procBadge.classList.add('hidden');
+                        if (procBadge) {
+                            if (counts.pending_procurements > 0) {
+                                procBadge.textContent = counts.pending_procurements;
+                                procBadge.classList.remove('hidden');
+                            } else {
+                                procBadge.classList.add('hidden');
+                            }
                         }
                     } 
                     else if (role === 'kepala_ruang') {
@@ -275,23 +282,41 @@
                             else if (data.role === 'bendahara') {
                                 const currentPendingProc = data.counts.pending_procurements || 0;
                                 const lastPendingProc = lastCounts.pending_procurements || 0;
+                                const currentApps = data.counts.apps || 0;
+                                const lastApps = lastCounts.apps || 0;
+                                const currentRequestApps = data.counts.request_apps || 0;
+                                const lastRequestApps = lastCounts.request_apps || 0;
 
+                                // Prioritas: Pengadaan > Request Aplikasi > Aplikasi
                                 if (currentPendingProc > lastPendingProc) {
                                     title = '💰 Validasi Keuangan';
                                     message = 'Kepala ruang menyetujui pengadaan. Menunggu cek anggaran.';
                                     shouldNotify = true;
                                     // Auto reload jika di halaman validasi bendahara
                                     if(currentPath.includes('/bendahara/procurements')) needReload = true;
+                                } else if (currentRequestApps > lastRequestApps) {
+                                    title = '📥 Request Aplikasi Baru';
+                                    message = 'Management mengirimkan request aplikasi baru untuk persetujuan anggaran.';
+                                    shouldNotify = true;
+                                    if(currentPath.includes('/bendahara')) needReload = true;
+                                } else if (currentApps > lastApps) {
+                                    title = '📋 Aplikasi Butuh Validasi';
+                                    message = 'Ada aplikasi yang membutuhkan validasi anggaran.';
+                                    shouldNotify = true;
+                                    if(currentPath.includes('/bendahara')) needReload = true;
                                 }
 
                                 lastCounts.pending_procurements = currentPendingProc;
+                                lastCounts.apps = currentApps;
+                                lastCounts.request_apps = currentRequestApps;
                             }
 
-                            // Simpan state terbaru agar tidak notif berulang
+                            // Simpan state terbaru ke sessionStorage
                             sessionStorage.setItem('notifCounts', JSON.stringify(lastCounts));
 
                             // === EKSEKUSI ===
-                            if (shouldNotify) {
+                            // Tampilkan notifikasi hanya jika ada perubahan dan bukan first check
+                            if (shouldNotify && !isFirstCheck) {
                                 playNotification();
 
                                 // Tampilkan Pesan
@@ -314,6 +339,8 @@
                                     }, 1000); // Tunggu 3 detik baru reload
                                 }
                             }
+
+                            isFirstCheck = false;
                         })
                         .catch(err => console.error('Gagal cek notifikasi:', err));
                 }
@@ -325,20 +352,22 @@
                         // Update badges pada page load
                         updateNavbarBadges(d.role, d.counts);
                         
-                        if(!sessionStorage.getItem('notifCounts')) {
-                            if(d.role === 'admin') {
-                                lastCounts = { reports: d.counts.reports, apps: d.counts.apps };
-                            } else if(d.role === 'direktur') {
-                                lastCounts = { pending_apps: d.counts.pending_apps, pending_procurements: d.counts.pending_procurements };
-                            } else if(d.role === 'management') {
-                                lastCounts = { submitted_apps: d.counts.submitted_apps, submitted_procurements: d.counts.submitted_procurements };
-                            } else if(d.role === 'bendahara') {
-                                lastCounts = { apps: d.counts.apps, pending_procurements: d.counts.pending_procurements };
-                            } else if(d.role === 'kepala_ruang') {
-                                lastCounts = { pending_procurements: d.counts.pending_procurements };
-                            }
-                            sessionStorage.setItem('notifCounts', JSON.stringify(lastCounts));
+                        // Initialize lastCounts dengan nilai 0 untuk first check
+                        if(d.role === 'admin') {
+                            lastCounts = { reports: 0, apps: 0 };
+                        } else if(d.role === 'direktur') {
+                            lastCounts = { pending_apps: 0, pending_procurements: 0 };
+                        } else if(d.role === 'management') {
+                            lastCounts = { submitted_apps: 0, submitted_procurements: 0 };
+                        } else if(d.role === 'bendahara') {
+                            lastCounts = { apps: 0, pending_procurements: 0, request_apps: 0 };
+                        } else if(d.role === 'kepala_ruang') {
+                            lastCounts = { pending_procurements: 0 };
                         }
+                        sessionStorage.setItem('notifCounts', JSON.stringify(lastCounts));
+                        
+                        // Jalankan check notifications sekali setelah inisialisasi untuk deteksi data awal
+                        setTimeout(checkNotifications, 500);
                     });
 
                 setInterval(checkNotifications, checkInterval);

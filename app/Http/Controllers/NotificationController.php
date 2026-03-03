@@ -90,10 +90,12 @@ class NotificationController extends Controller
         }
         // --- BENDAHARA (UPDATE) ---
         elseif ($role === 'bendahara') {
-            // Bendahara memvalidasi pengadaan untuk AppRequest — gunakan kolom procurement_approval_status
-            $pendingProcurements = AppRequest::where('procurement_approval_status', 'submitted_to_bendahara')->count();
-            // Hitung juga apps yang membutuhkan perhatian dari bendahara
+            // Bendahara memvalidasi pengadaan dari Procurement model
+            $pendingProcurements = Procurement::where('status', 'submitted_to_bendahara')->count();
+            
+            // Hitung AppRequest yang submitted ke bendahara untuk validasi anggaran
             $appsCount = AppRequest::where('procurement_approval_status', 'submitted_to_bendahara')->count();
+            
             // Hitung request apps untuk bendahara
             $requestAppsCount = AppRequest::whereIn('status', ['submitted_to_bendahara', 'pending_bendahara'])->count();
 
