@@ -10,6 +10,15 @@
 
                 <div class="hidden space-x-2 lg:space-x-4 sm:-my-px sm:ms-8 sm:flex items-center">
                     
+                    @php
+                        // Menghitung jumlah projek aplikasi yang belum selesai
+                        $ongoingAppsCount = 0;
+                        if (Auth::check() && class_exists('\App\Models\AppRequest')) {
+                        
+                            $ongoingAppsCount = \App\Models\AppRequest::where('status', 'in_progress')->count();
+                        }
+                    @endphp
+
                     {{-- === 1. MENU ADMIN === --}}
                     @if(Auth::check() && Auth::user()->role === 'admin')
                         <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" class="text-[13px] font-bold tracking-tight">
@@ -22,7 +31,9 @@
                         </x-nav-link>
                         <x-nav-link :href="route('apps.ongoing')" :active="request()->routeIs('apps.ongoing', 'apps.show')" class="text-[13px] font-bold tracking-tight">
                             {{ __('Projek') }}
-                            <span id="badge-admin-apps" class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-600 text-white hidden">0</span>
+                            @if($ongoingAppsCount > 0)
+                                <span class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-600 text-white">{{ $ongoingAppsCount }}</span>
+                            @endif
                         </x-nav-link>
                         <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')" class="text-[13px] font-bold tracking-tight text-gray-500">
                             {{ __('User') }}
@@ -60,7 +71,9 @@
                         </x-nav-link>
                         <x-nav-link :href="route('apps.ongoing')" :active="request()->routeIs('apps.ongoing', 'apps.show')" class="text-[13px] font-bold tracking-tight">
                             {{ __('Projek') }}
-                            <span id="badge-director-apps" class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-600 text-white hidden">0</span>
+                            @if($ongoingAppsCount > 0)
+                                <span class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-600 text-white">{{ $ongoingAppsCount }}</span>
+                            @endif
                         </x-nav-link>
                         <x-nav-link :href="route('public.tracking')" :active="request()->routeIs('public.tracking')" class="text-[13px] font-bold tracking-tight">
                             {{ __('Tracking') }}
@@ -81,7 +94,9 @@
                         </x-nav-link>
                         <x-nav-link :href="route('apps.ongoing')" :active="request()->routeIs('apps.ongoing', 'apps.show')" class="text-[13px] font-bold tracking-tight">
                             {{ __('Projek') }}
-                            <span id="badge-management-apps" class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-600 text-white hidden">0</span>
+                            @if($ongoingAppsCount > 0)
+                                <span class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-600 text-white">{{ $ongoingAppsCount }}</span>
+                            @endif
                         </x-nav-link>
                         <x-nav-link :href="route('management.procurements')" :active="request()->routeIs('management.procurements')" class="text-[13px] font-bold tracking-tight">
                             {{ __('Persetujuan') }}
@@ -213,9 +228,7 @@
         </div>
     </div>
 
-    {{-- Quick Rapat Modal removed — single Rapat link in navbar covers all functions. --}}
-
-    {{-- MOBILE MENU --}}
+{{-- MOBILE MENU --}}
 <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden bg-white border-t border-gray-100">
     <div class="pt-2 pb-3 space-y-1 px-2">
         @if(Auth::check())
@@ -233,7 +246,9 @@
                 </div>
                 <div class="flex items-center justify-between px-3 py-2">
                     <x-responsive-nav-link :href="route('apps.ongoing')" :active="request()->routeIs('apps.ongoing', 'apps.show')" class="rounded-lg font-bold text-[13px] flex-1 ps-0">{{ __('Projek') }}</x-responsive-nav-link>
-                    <span id="badge-admin-apps-mobile" class="px-1.5 py-0.5 text-[10px] rounded-full bg-blue-600 text-white hidden">0</span>
+                    @if($ongoingAppsCount > 0)
+                        <span class="px-1.5 py-0.5 text-[10px] rounded-full bg-blue-600 text-white">{{ $ongoingAppsCount }}</span>
+                    @endif
                 </div>
                 <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')" class="rounded-lg font-bold text-[13px] text-gray-500">{{ __('User') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('admin.rooms.index')" :active="request()->routeIs('admin.rooms.*')" class="rounded-lg font-bold text-[13px] text-gray-500">{{ __('Ruangan') }}</x-responsive-nav-link>
@@ -254,7 +269,9 @@
                 </div>
                 <div class="flex items-center justify-between px-3 py-2">
                     <x-responsive-nav-link :href="route('apps.ongoing')" :active="request()->routeIs('apps.ongoing', 'apps.show')" class="rounded-lg font-bold text-[13px] flex-1 ps-0">{{ __('Projek') }}</x-responsive-nav-link>
-                    <span id="badge-director-apps-mobile" class="px-1.5 py-0.5 text-[10px] rounded-full bg-blue-600 text-white hidden">0</span>
+                    @if($ongoingAppsCount > 0)
+                        <span class="px-1.5 py-0.5 text-[10px] rounded-full bg-blue-600 text-white">{{ $ongoingAppsCount }}</span>
+                    @endif
                 </div>
                 <x-responsive-nav-link :href="route('public.tracking')" :active="request()->routeIs('public.tracking')" class="rounded-lg font-bold text-[13px]">{{ __('Tracking') }}</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('public.home')" :active="request()->routeIs('public.home')" class="rounded-lg font-bold text-[13px] text-blue-700">{{ __('Laporan Baru') }}</x-responsive-nav-link>
@@ -269,7 +286,9 @@
                 </div>
                 <div class="flex items-center justify-between px-3 py-2">
                     <x-responsive-nav-link :href="route('apps.ongoing')" :active="request()->routeIs('apps.ongoing', 'apps.show')" class="rounded-lg font-bold text-[13px] flex-1 ps-0">{{ __('Projek') }}</x-responsive-nav-link>
-                    <span id="badge-management-apps-mobile" class="px-1.5 py-0.5 text-[10px] rounded-full bg-blue-600 text-white hidden">0</span>
+                    @if($ongoingAppsCount > 0)
+                        <span class="px-1.5 py-0.5 text-[10px] rounded-full bg-blue-600 text-white">{{ $ongoingAppsCount }}</span>
+                    @endif
                 </div>
                 <div class="flex items-center justify-between px-3 py-2">
                     <x-responsive-nav-link :href="route('management.procurements')" :active="request()->routeIs('management.procurements')" class="rounded-lg font-bold text-[13px] flex-1 ps-0">{{ __('Persetujuan') }}</x-responsive-nav-link>
@@ -335,7 +354,7 @@
         @else
             {{-- MENU UNTUK GUEST --}}
             <x-responsive-nav-link :href="route('public.tracking')" :active="request()->routeIs('public.tracking')" class="rounded-lg font-bold text-[13px]">{{ __('Tracking Laporan') }}</x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('public.home')" :active="request()->routeIs('public.home')" class="rounded-lg font-bold text-[13px] text-blue-700">{{ __('Buat Laporan Baru') }}</x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('public.home')" :active="request()->requestIs('public.home')" class="rounded-lg font-bold text-[13px] text-blue-700">{{ __('Buat Laporan Baru') }}</x-responsive-nav-link>
             
             {{-- TOMBOL LOGIN MOBILE --}}
             <div class="pt-4 pb-2 border-t border-gray-100 mt-2 px-4">
