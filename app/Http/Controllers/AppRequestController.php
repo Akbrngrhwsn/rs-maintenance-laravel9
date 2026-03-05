@@ -206,7 +206,7 @@ class AppRequestController extends Controller
         
         // Hanya approve aplikasi, tidak terpengaruh pengadaan
         if ($request->status == 'terima') {
-            $app->status = 'approved';
+            $app->status = 'in_progress';
             $message = 'Pengajuan aplikasi berhasil disetujui.';
         } else {
             $app->status = 'rejected';
@@ -383,7 +383,7 @@ class AppRequestController extends Controller
             return back()->with('error', 'Aplikasi ini tidak membutuhkan pengadaan.');
         }
 
-        // Hanya reject procurement, aplikasi tetap approved
+        // Hanya reject procurement, aplikasi tetap 
         $app->procurement_approval_status = 'rejected';
         
         if ($request->filled('catatan_management_procurement') && \Illuminate\Support\Facades\Schema::hasColumn('app_requests', 'catatan_management_procurement')) {

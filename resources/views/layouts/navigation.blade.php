@@ -354,7 +354,7 @@
         @else
             {{-- MENU UNTUK GUEST --}}
             <x-responsive-nav-link :href="route('public.tracking')" :active="request()->routeIs('public.tracking')" class="rounded-lg font-bold text-[13px]">{{ __('Tracking Laporan') }}</x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('public.home')" :active="request()->requestIs('public.home')" class="rounded-lg font-bold text-[13px] text-blue-700">{{ __('Buat Laporan Baru') }}</x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('public.home')" :active="request()->routeIs('public.home')" class="rounded-lg font-bold text-[13px] text-blue-700">{{ __('Buat Laporan Baru') }}</x-responsive-nav-link>
             
             {{-- TOMBOL LOGIN MOBILE --}}
             <div class="pt-4 pb-2 border-t border-gray-100 mt-2 px-4">

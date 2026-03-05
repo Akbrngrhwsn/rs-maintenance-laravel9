@@ -26,7 +26,7 @@ class NotificationController extends Controller
             // Hitung AppRequest yang baru masuk ke alur Admin IT
             $appCount = AppRequest::where('status', 'submitted_to_admin')->count();
             // Hitung semua request apps yang pending
-            $requestAppsCount = AppRequest::whereIn('status', ['submitted_to_admin', 'submitted_to_management', 'submitted_to_bendahara', 'submitted_to_director'])->count();
+            $requestAppsCount = AppRequest::whereIn('status', ['submitted_to_admin' ])->count();
 
             $response['counts'] = [
                 'reports' => $reportCount,
