@@ -26,10 +26,7 @@
                                 <button type="submit" class="px-3 py-1 bg-blue-600 text-white rounded-md text-sm">Cari</button>
                             </form>
 
-                            <form action="{{ route('kepala-ruang.procurements.export.weekly') }}" method="GET" class="flex items-center gap-2">
-                                <input type="date" name="date" value="{{ request('date', date('Y-m-d')) }}" class="text-sm border-gray-300 rounded-md px-2 py-1">
-                                <button type="submit" class="px-3 py-1 bg-amber-600 text-white rounded-md text-sm">Export Mingguan (PDF)</button>
-                            </form>
+                            
                         </div>
                     </div>
                 </div>

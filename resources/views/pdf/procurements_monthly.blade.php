@@ -4,18 +4,20 @@
     <meta charset="utf-8">
     <title>Laporan Pengadaan Bulanan</title>
     <style>
-        body { font-family: DejaVu Sans, sans-serif; font-size:12px }
-        table { width:100%; border-collapse: collapse; }
+        body { font-family: DejaVu Sans, sans-serif; font-size:12px; color: #333; }
+        table { width:100%; border-collapse: collapse; margin-bottom: 20px; }
         th, td { border:1px solid #ddd; padding:6px; }
-        th { background:#f3f4f6; }
+        th { background:#f3f4f6; text-align: left; }
+        .text-right { text-align: right; }
+        .section-title { background: #eeeeee; padding: 5px; font-weight: bold; border: 1px solid #ddd; margin-top: 20px; }
         
-        /* Tambahan Style untuk Footer Tanda Tangan */
+        /* Style untuk Footer Tanda Tangan */
         .footer-signature {
             float: right; 
             width: 220px; 
             text-align: center; 
             margin-top: 30px;
-            page-break-inside: avoid; /* Mencegah tanda tangan terpotong ke halaman baru */
+            page-break-inside: avoid;
         }
     </style>
 </head>
@@ -31,70 +33,119 @@
                 <img src="{{ $kopFile }}" alt="Kop Surat" style="width:100%; max-height:120px; object-fit:contain;" />
             @else
                 <div style="text-align:center; margin-bottom:6px;">
-                    <div style="font-weight:700; font-size:16px;">{{ config('app.name', 'KOP SURAT') }}</div>
-                    <div style="font-size:12px;">Alamat dan kontak instansi</div>
+                    <div style="font-weight:700; font-size:16px;">{{ config('app.name', 'RS MAINTENANCE SYSTEM') }}</div>
+                    <div style="font-size:12px;">Laporan Terpadu Pengadaan IT</div>
                 </div>
                 <hr />
             @endif
         @endif
     </div>
 
-    <h3>Laporan Pengadaan Bulanan</h3>
-    <div>Periode: {{ $monthLabel ?? '' }}</div>
+    <h2 style="text-align: center;">LAPORAN PENGADAAN BULANAN</h2>
+    <div style="text-align: center;">Periode: {{ $monthLabel ?? '' }}</div>
     <br>
 
+    {{-- BAGIAN 1: PENGADAAN KERUSAKAN / MAINTENANCE --}}
+    <div class="section-title">A. Pengadaan Unit Maintenance (Kerusakan)</div>
     <table>
         <thead>
             <tr>
-                <th>ID</th>
-                <th>Waktu Dibuat</th>
-                <th>Tiket / Ruangan</th>
-                <th>Status</th>
-                <th>Item (Jml x Harga)</th>
-                <th>Total</th>
+                <th width="5%">ID</th>
+                <th width="15%">Waktu Dibuat</th>
+                <th width="25%">Tiket / Ruangan</th>
+                <th width="35%">Detail Barang (Jml x Harga)</th>
+                <th width="20%" class="text-right">Total</th>
             </tr>
         </thead>
         <tbody>
-            @foreach($procurements as $p)
+            @forelse($procurements as $p)
                 @php $pTotal = 0; @endphp
                 <tr>
                     <td>{{ $p->id }}</td>
-                    <td>{{ optional($p->created_at)->format('Y-m-d H:i') }}</td>
+                    <td>{{ optional($p->created_at)->format('d/m/Y H:i') }}</td>
                     <td>
                         @if($p->report)
-                            {{ $p->report->ticket_number ?? '' }} / {{ $p->report->ruangan ?? '' }}
+                            <strong>{{ $p->report->ticket_number ?? '' }}</strong><br>
+                            <small>{{ $p->report->ruangan ?? '' }}</small>
                         @else
                             -
                         @endif
                     </td>
-                    <td>{{ $p->status_label ?? $p->status }}</td>
                     <td>
-                        <table style="width:100%; border:none;">
-                        @php $items = is_array($p->items) ? $p->items : []; @endphp
+                        <ul style="padding-left: 15px; margin: 0;">
+                        @php $items = is_array($p->items) ? $p->items : (json_decode($p->items, true) ?: []); @endphp
                         @foreach($items as $it)
                             @php
                                 $qty = isset($it['quantity']) ? (int)$it['quantity'] : (isset($it['jumlah']) ? (int)$it['jumlah'] : 1);
                                 $price = isset($it['unit_price']) ? (float)$it['unit_price'] : (isset($it['harga_satuan']) ? (float)$it['harga_satuan'] : (isset($it['harga']) ? (float)$it['harga'] : (isset($it['biaya']) ? (float)$it['biaya'] : 0)));
                                 $name = $it['name'] ?? $it['nama'] ?? '-';
-                                $subtotal = $qty * $price; $pTotal += $subtotal;
+                                $subtotal = $qty * $price; 
+                                $pTotal += $subtotal;
                             @endphp
-                            <tr><td style="border:none;padding:2px;">{{ $name }} ({{ $qty }} x {{ number_format($price,0,',','.') }})</td></tr>
+                            <li>{{ $name }} ({{ $qty }}x {{ number_format($price,0,',','.') }})</li>
                         @endforeach
-                        </table>
+                        </ul>
                     </td>
-                    <td style="text-align:right">{{ number_format($pTotal,0,',','.') }}</td>
+                    <td class="text-right">Rp {{ number_format($pTotal,0,',','.') }}</td>
                 </tr>
-            @endforeach
+            @empty
+                <tr><td colspan="5" style="text-align:center;">Tidak ada data pengadaan kerusakan bulan ini.</td></tr>
+            @endforelse
         </tbody>
     </table>
 
-    <p style="margin-bottom: 6px">Demikian laporan ini disusun untuk memberikan gambaran mengenai Pemeliharaan Sistem IT periode ini.
-        Atas perhatian dan kerja samanya, kami ucapkan terima kasih.</p>
+    {{-- BAGIAN 2: PENGADAAN APLIKASI --}}
+    <div class="section-title">B. Pengadaan Pengembangan Aplikasi</div>
+    <table>
+        <thead>
+            <tr>
+                <th width="5%">ID</th>
+                <th width="15%">Waktu Dibuat</th>
+                <th width="30%">Nama Aplikasi</th>
+                <th width="30%">Detail Barang (Jml x Harga)</th>
+                <th width="20%" class="text-right">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{-- Pastikan di Controller Anda mengirim variabel dengan nama $app_requests --}}
+            @forelse($app_requests as $app)
+                <tr>
+                    <td>{{ $app->id }}</td>
+                    <td>{{ optional($app->created_at)->format('d/m/Y H:i') }}</td>
+                    <td>
+                        <strong>{{ $app->nama_aplikasi }}</strong>
+                    </td>
+                     <td>
+                        <ul style="padding-left: 15px; margin: 0;">
+                        @php $items = is_array($app->requested_items) ? $app->requested_items : (json_decode($app->requested_items, true) ?: []); @endphp
+                        @foreach($items as $it)
+                            @php
+                                $qty = isset($it['quantity']) ? (int)$it['quantity'] : (isset($it['jumlah']) ? (int)$it['jumlah'] : 1);
+                                $price = isset($it['unit_price']) ? (float)$it['unit_price'] : (isset($it['harga_satuan']) ? (float)$it['harga_satuan'] : (isset($it['harga']) ? (float)$it['harga'] : (isset($it['biaya']) ? (float)$it['biaya'] : 0)));
+                                $name = $it['name'] ?? $it['nama'] ?? '-';
+                                $subtotal = $qty * $price; 
+                                $pTotal += $subtotal;
+                            @endphp
+                            <li>{{ $name }} ({{ $qty }}x {{ number_format($price,0,',','.') }})</li>
+                        @endforeach
+                        </ul>
+                    </td>
+                    <td class="text-right">
+                        Rp {{ number_format($app->procurement_estimate, 0, ',', '.') }}
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="5" style="text-align:center;">Tidak ada data pengadaan aplikasi bulan ini.</td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
 
-    {{-- BAGIAN TANDA TANGAN DENGAN QR --}}
+    <p style="margin-top: 20px;">Demikian laporan pengadaan ini disusun sebagai dokumentasi aset dan pengeluaran sistem IT. 
+    Atas perhatian dan kerja samanya, kami ucapkan terima kasih.</p>
+
     <div class="footer-signature">
-        
-
         <p style="margin-bottom: 5px;">Disetujui/Divalidasi Oleh,</p>
         
         @if(isset($qrCode))
@@ -104,13 +155,11 @@
         @endif
         
         <br>
-        
         <span style="font-size: 12px; font-weight: bold; text-decoration: underline;">
             {{ $validator ?? 'Administrator' }}
         </span>
         <br>
         <span style="font-size: 10px; color: #555;">
-            {{-- Menggunakan variable waktuValidasi agar sesuai dengan data di dalam QR --}}
             {{ $waktuValidasi ?? date('d F Y') }}
         </span>
     </div>

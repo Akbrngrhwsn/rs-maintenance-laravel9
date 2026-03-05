@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use App\Models\Procurement;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Support\Facades\Auth; // Tambahan: Import Auth untuk ambil nama user
+use App\Models\AppRequest;
 
 class AdminReportController extends Controller
 {
@@ -232,47 +233,68 @@ class AdminReportController extends Controller
 }
 
     public function exportProcurementsMonthly(Request $request)
-    {
-        // 1. Cek Library PDF
-        if (!class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
-            return response("PDF package not installed.", 500);
-        }
-
-        // 2. Logika Tanggal & Data
-        $month = $request->input('month', date('Y-m'));
-        try {
-            $carbon = \Carbon\Carbon::createFromFormat('Y-m', $month)->startOfMonth();
-        } catch (\Exception $e) {
-            $carbon = \Carbon\Carbon::now()->startOfMonth();
-        }
-
-        $start = $carbon->copy()->startOfMonth()->startOfDay();
-        $end = $carbon->copy()->endOfMonth()->endOfDay();
-
-        $procurements = Procurement::with(['report'])->whereBetween('created_at', [$start, $end])->get();
-        $monthLabel = $carbon->locale('id')->isoFormat('MMMM Y');
-
-        // 3. LOGIKA QR CODE (Baru)
-        $validator = \Illuminate\Support\Facades\Auth::user()->name ?? 'Administrator';
-        $waktuValidasi = \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y, HH:mm') . ' WIB';
-        
-        $qrString = "Laporan Pengadaan Bulanan periode {$monthLabel}. Divalidasi oleh {$validator} pada {$waktuValidasi}";
-
-        $qrCode = base64_encode(
-            QrCode::format('svg')
-                ->size(100)
-                ->margin(1)
-                ->errorCorrection('M')
-                ->generate($qrString)
-        );
-        $qrMime = 'image/svg+xml';
-        $qrIsSvg = true;
-
-        // 4. Kirim ke View (Tambahkan qrCode, validator, waktuValidasi)
-        $pdf = Pdf::loadView('pdf.procurements_monthly', compact('procurements', 'monthLabel', 'qrCode', 'validator', 'waktuValidasi', 'qrMime', 'qrIsSvg'));
-        
-        return $pdf->download('laporan-pengadaan-bulanan-' . $carbon->format('Ym') . '.pdf');
+{
+    // 1. Cek Library PDF
+    if (!class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+        return response("PDF package not installed.", 500);
     }
+
+    // 2. Logika Tanggal
+    $month = $request->input('month', date('Y-m'));
+    try {
+        $carbon = \Carbon\Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+    } catch (\Exception $e) {
+        $carbon = \Carbon\Carbon::now()->startOfMonth();
+    }
+
+    $start = $carbon->copy()->startOfMonth()->startOfDay();
+    $end = $carbon->copy()->endOfMonth()->endOfDay();
+
+    // 3. Ambil Data dari Kedua Sumber
+    // Data Pengadaan Kerusakan (Maintenance)
+    $procurements = Procurement::with(['report'])
+        ->whereBetween('created_at', [$start, $end])
+        ->get();
+
+    // Data Pengadaan Aplikasi (App Requests yang butuh pengadaan)
+    $app_requests = AppRequest::where('needs_procurement', 1)
+        ->whereBetween('created_at', [$start, $end])
+        ->get();
+
+    $monthLabel = $carbon->locale('id')->isoFormat('MMMM Y');
+
+    // 4. LOGIKA QR CODE
+    $validator = \Illuminate\Support\Facades\Auth::user()->name ?? 'Administrator';
+    $waktuValidasi = \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y, HH:mm') . ' WIB';
+    
+    // Gabungkan info jumlah data di QR Code
+    $totalData = $procurements->count() + $app_requests->count();
+    $qrString = "Laporan Pengadaan Bulanan periode {$monthLabel}. Total: {$totalData} data. Divalidasi oleh {$validator} pada {$waktuValidasi}";
+
+    $qrCode = base64_encode(
+        QrCode::format('svg')
+            ->size(100)
+            ->margin(1)
+            ->errorCorrection('M')
+            ->generate($qrString)
+    );
+    $qrMime = 'image/svg+xml';
+    $qrIsSvg = true;
+
+    // 5. Kirim ke View (Tambahkan appProcurements ke compact)
+    $pdf = Pdf::loadView('pdf.procurements_monthly', compact(
+        'procurements', 
+        'app_requests', // <--- Tambahkan data pengadaan aplikasi
+        'monthLabel', 
+        'qrCode', 
+        'validator', 
+        'waktuValidasi', 
+        'qrMime', 
+        'qrIsSvg'
+    ));
+    
+    return $pdf->download('laporan-pengadaan-gabungan-' . $carbon->format('Ym') . '.pdf');
+}
 
     // app/Http/Controllers/AdminReportController.php
 
