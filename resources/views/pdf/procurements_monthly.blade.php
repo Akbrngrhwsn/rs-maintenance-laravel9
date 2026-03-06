@@ -103,11 +103,10 @@
                 <th width="15%">Waktu Dibuat</th>
                 <th width="30%">Nama Aplikasi</th>
                 <th width="30%">Detail Barang (Jml x Harga)</th>
-                <th width="20%" class="text-right">Total</th>
+                <th width="20%" class="text-right">Total Estimasi</th>
             </tr>
         </thead>
         <tbody>
-            {{-- Pastikan di Controller Anda mengirim variabel dengan nama $app_requests --}}
             @forelse($app_requests as $app)
                 <tr>
                     <td>{{ $app->id }}</td>
@@ -115,23 +114,49 @@
                     <td>
                         <strong>{{ $app->nama_aplikasi }}</strong>
                     </td>
-                     <td>
-                        <ul style="padding-left: 15px; margin: 0;">
-                        @php $items = is_array($app->requested_items) ? $app->requested_items : (json_decode($app->requested_items, true) ?: []); @endphp
-                        @foreach($items as $it)
-                            @php
-                                $qty = isset($it['quantity']) ? (int)$it['quantity'] : (isset($it['jumlah']) ? (int)$it['jumlah'] : 1);
-                                $price = isset($it['unit_price']) ? (float)$it['unit_price'] : (isset($it['harga_satuan']) ? (float)$it['harga_satuan'] : (isset($it['harga']) ? (float)$it['harga'] : (isset($it['biaya']) ? (float)$it['biaya'] : 0)));
-                                $name = $it['name'] ?? $it['nama'] ?? '-';
-                                $subtotal = $qty * $price; 
-                                $pTotal += $subtotal;
-                            @endphp
-                            <li>{{ $name }} ({{ $qty }}x {{ number_format($price,0,',','.') }})</li>
-                        @endforeach
-                        </ul>
+                    <td>
+                        {{-- Menampilkan daftar item --}}
+                        @if(is_array($app->requested_items))
+                            @foreach($app->requested_items as $item)
+                                - {{ $item['nama'] ?? $item['name'] ?? '-' }} <br>
+                            @endforeach
+                        @elseif(!empty($app->requested_items))
+                            {{ $app->requested_items }}
+                        @else
+                            {{ $app->deskripsi }}
+                        @endif
+                        
+                        <br>
+                        
+                        {{-- LOGIKA WARNA STATUS --}}
+                        @php
+                            $rawStatus = $app->procurement_approval_status ?: 'Pending';
+                            $statusLower = strtolower($rawStatus);
+                            $statusColor = '#555'; // Warna default abu-abu gelap
+                            $statusWeight = 'normal';
+
+                            if (str_contains($statusLower, 'tolak') || str_contains($statusLower, 'reject')) {
+                                $statusColor = '#dc2626'; // Merah untuk ditolak
+                                $statusWeight = 'bold';
+                            } elseif (str_contains($statusLower, 'setuju') || str_contains($statusLower, 'approve')) {
+                                $statusColor = '#16a34a'; // Hijau untuk disetujui
+                                $statusWeight = 'bold';
+                            }
+                        @endphp
+
+                        <div style="margin-top: 5px; color: {{ $statusColor }}; font-weight: {{ $statusWeight }}; font-size: 11px;">
+                            Status: {{ strtoupper($rawStatus) }}
+                        </div>
                     </td>
                     <td class="text-right">
-                        Rp {{ number_format($app->procurement_estimate, 0, ',', '.') }}
+                        {{-- Coret harga total jika ditolak --}}
+                        @if(str_contains($statusLower, 'tolak') || str_contains($statusLower, 'reject'))
+                            <span style="text-decoration: line-through; color: #999;">
+                                Rp {{ number_format($app->procurement_estimate, 0, ',', '.') }}
+                            </span>
+                        @else
+                            Rp {{ number_format($app->procurement_estimate, 0, ',', '.') }}
+                        @endif
                     </td>
                 </tr>
             @empty
