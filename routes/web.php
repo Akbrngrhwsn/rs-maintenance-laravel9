@@ -130,6 +130,11 @@ Route::middleware('auth')->group(function () {
         // Admin IT: Process App Requests (fill procurement estimate or accept/reject)
         Route::patch('/admin/apps/{id}/process', [AppRequestController::class, 'adminProcess'])->name('admin.apps.process');
 
+        // Route untuk pengajuan ulang pengadaan aplikasi yang ditolak
+        Route::patch('/admin/apps/{id}/reprocess-procurement', [AppRequestController::class, 'reprocessProcurement'])
+            ->name('admin.apps.reprocess_procurement')
+            ->middleware(['auth']);
+
     });
 
     Route::middleware(['auth', 'verified'])->group(function () {

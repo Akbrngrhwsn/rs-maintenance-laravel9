@@ -859,4 +859,89 @@ public function downloadProcurementReport($id)
 
     return $pdf->download('laporan-pengadaan-' . \Illuminate\Support\Str::slug($project->nama_aplikasi) . '.pdf');
 }
+
+public function reprocessProcurement(Request $request, $id)
+    {
+        $project = \App\Models\AppRequest::findOrFail($id);
+        
+        // Ambil data items dari form
+        $items = $request->input('items', []);
+        $totalEstimate = 0;
+        $cleanedItems = [];
+        
+        // Hitung total dan bersihkan array
+        foreach ($items as $item) {
+            if (!empty($item['nama'])) {
+                $qty = (int) ($item['jumlah'] ?? 1);
+                $price = (float) ($item['harga_satuan'] ?? 0);
+                $totalEstimate += ($qty * $price);
+                $cleanedItems[] = $item;
+            }
+        }
+        
+        // Update data di AppRequest
+        $project->requested_items = is_array($project->requested_items) ? $cleanedItems : json_encode($cleanedItems);
+        $project->procurement_estimate = $totalEstimate;
+        $project->procurement_approval_status = 'submitted_to_management'; // Kembalikan ke Management
+        
+        if ($request->filled('catatan_admin')) {
+            $project->catatan_admin = $request->input('catatan_admin');
+        }
+        $project->save();
+
+        // Singkronisasi ke tabel procurements (Universal) jika ada
+        $procUniversal = \App\Models\Procurement::where('app_request_id', $project->id)->first();
+        if ($procUniversal) {
+            $procUniversal->items = is_array($procUniversal->items) ? $cleanedItems : json_encode($cleanedItems);
+            $procUniversal->total = $totalEstimate;
+            $procUniversal->status = 'submitted_to_management';
+            $procUniversal->save();
+        }
+        
+        return back()->with('success', 'Pengadaan berhasil direvisi dan diajukan ulang ke Management.');
+    }
+
+    // Fungsi Management MENYETUJUI Pengadaan Aplikasi
+    public function managementProcurementApprove(Request $request, $id)
+    {
+        $project = \App\Models\AppRequest::findOrFail($id);
+        
+        // Ubah status ke Bendahara
+        $project->procurement_approval_status = 'submitted_to_bendahara';
+        $project->save();
+
+        // Sinkronisasi ke tabel procurements (Universal)
+        $procUniversal = \App\Models\Procurement::where('app_request_id', $project->id)->first();
+        if ($procUniversal) {
+            $procUniversal->status = 'submitted_to_bendahara';
+            $procUniversal->save();
+        }
+
+        return back()->with('success', 'Pengadaan disetujui dan diteruskan ke Bendahara.');
+    }
+
+    // Fungsi Management MENOLAK Pengadaan Aplikasi
+    public function managementProcurementReject(Request $request, $id)
+    {
+        $request->validate([
+            'catatan_management_procurement' => 'required|string',
+        ]);
+
+        $project = \App\Models\AppRequest::findOrFail($id);
+        
+        // Tandai ditolak oleh management
+        $project->procurement_approval_status = 'rejected_by_management';
+        $project->catatan_management_procurement = $request->catatan_management_procurement;
+        $project->save();
+
+        // Sinkronisasi ke tabel procurements (Universal)
+        $procUniversal = \App\Models\Procurement::where('app_request_id', $project->id)->first();
+        if ($procUniversal) {
+            $procUniversal->status = 'rejected_by_management';
+            $procUniversal->management_note = $request->catatan_management_procurement;
+            $procUniversal->save();
+        }
+
+        return back()->with('error', 'Pengadaan ditolak dan dikembalikan ke Admin IT untuk direvisi.');
+    }
 }

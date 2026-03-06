@@ -337,6 +337,162 @@
                         </form>
                     </div>
                     @endif
+
+                    {{-- TOMBOL & FORM RE-PROCUREMENT JIKA DITOLAK --}}
+                    @php
+                        $procLowerAdmin = strtolower($project->procurement_approval_status ?? '');
+                        $isProcRejectedAdmin = str_contains($procLowerAdmin, 'tolak') || str_contains($procLowerAdmin, 'reject');
+                    @endphp
+
+                    @if($isProcRejectedAdmin && $project->status !== 'rejected')
+                    <div class="mt-6 border-t pt-6">
+                        <div class="bg-red-50 p-4 rounded-lg border border-red-200 mb-6">
+                            <h4 class="font-bold text-red-800 flex items-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                Pengajuan Anggaran Ditolak!
+                            </h4>
+                            <p class="text-sm text-red-700 mt-1">Anda dapat menyesuaikan kembali rincian barang/anggaran di bawah ini dan mengajukannya ulang.</p>
+                        </div>
+
+                        <form action="{{ route('admin.apps.reprocess_procurement', $project->id) }}" method="POST" class="flex flex-col gap-3">
+                            @csrf @method('PATCH')
+
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-4">Revisi Pengajuan Barang</label>
+                                @php
+                                    $existingItemsReprocess = [];
+                                    if (is_array($project->requested_items)) {
+                                        $existingItemsReprocess = $project->requested_items;
+                                    } elseif (is_string($project->requested_items) && $project->requested_items !== '') {
+                                        $decoded = @json_decode($project->requested_items, true);
+                                        if (is_array($decoded)) $existingItemsReprocess = $decoded;
+                                    }
+                                    $countReprocess = max(1, count($existingItemsReprocess));
+                                @endphp
+
+                                <div id="item-list-reprocess" class="space-y-6">
+                                    @for($i = 0; $i < $countReprocess; $i++)
+                                        @php $it = $existingItemsReprocess[$i] ?? []; @endphp
+                                        <div class="item-card-reprocess bg-white p-4 rounded-lg border" id="item-reprocess-{{ $i }}">
+                                            <div class="flex justify-between items-center mb-3">
+                                                <h3 class="item-number-reprocess font-bold text-blue-700">Pengajuan Barang #{{ $i + 1 }}</h3>
+                                                <button type="button" onclick="removeRowReprocess({{ $i }})" class="text-red-600 px-3 py-1 rounded bg-red-50">Hapus</button>
+                                            </div>
+                                            <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                                                <div class="md:col-span-4">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Nama/Jenis Barang</label>
+                                                    <input type="text" name="items[{{ $i }}][nama]" value="{{ $it['nama'] ?? $it['name'] ?? '' }}" required class="w-full border-gray-200 rounded px-3 py-2">
+                                                </div>
+                                                <div class="md:col-span-4">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Merk/Tipe</label>
+                                                    <input type="text" name="items[{{ $i }}][merk]" value="{{ $it['merk'] ?? $it['brand'] ?? '' }}" class="w-full border-gray-200 rounded px-3 py-2">
+                                                </div>
+                                                <div class="md:col-span-1">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Jml</label>
+                                                    <input type="number" name="items[{{ $i }}][jumlah]" value="{{ $it['jumlah'] ?? $it['qty'] ?? 1 }}" class="w-20 border-gray-200 rounded px-3 py-2">
+                                                </div>
+                                                <div class="md:col-span-3">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Harga Satuan (RP)</label>
+                                                    <input type="number" step="0.01" name="items[{{ $i }}][harga_satuan]" value="{{ $it['harga_satuan'] ?? $it['unit_price'] ?? $it['harga'] ?? 0 }}" class="w-full border-gray-200 rounded px-3 py-2">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endfor
+                                </div>
+
+                                <div class="mt-3">
+                                    <button type="button" onclick="addRowReprocess()" class="text-sm text-blue-600 font-medium">+ Tambah Barang Lain</button>
+                                </div>
+
+                                <div class="flex gap-3 mt-4">
+                                    <input type="number" step="0.01" name="procurement_estimate" id="procurementEstimateReprocess" placeholder="Estimasi Total (otomatis)" readonly class="text-sm border-gray-300 rounded-lg shadow-sm bg-gray-50 flex-1 font-bold">
+                                    <input type="text" name="catatan_admin" placeholder="Catatan perbaikan (opsional)" class="text-sm border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 w-64">
+                                </div>
+
+                                <div class="flex justify-end mt-4">
+                                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow transition">Ajukan Ulang ke Management</button>
+                                </div>
+
+                                <script>
+                                    let counterReprocess = {{ $countReprocess }};
+                                    function addRowReprocess(){
+                                        const container = document.getElementById('item-list-reprocess');
+                                        const idx = counterReprocess;
+                                        const el = document.createElement('div');
+                                        el.className = 'item-card-reprocess bg-white p-4 rounded-lg border mt-6';
+                                        el.id = 'item-reprocess-' + idx;
+                                        el.innerHTML = `
+                                            <div class="flex justify-between items-center mb-3">
+                                                <h3 class="item-number-reprocess font-bold text-blue-700">Pengajuan Barang #${idx + 1}</h3>
+                                                <button type="button" onclick="removeRowReprocess(${idx})" class="text-red-600 px-3 py-1 rounded bg-red-50">Hapus</button>
+                                            </div>
+                                            <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                                                <div class="md:col-span-4">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Nama/Jenis Barang</label>
+                                                    <input type="text" name="items[${idx}][nama]" required class="w-full border-gray-200 rounded px-3 py-2">
+                                                </div>
+                                                <div class="md:col-span-4">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Merk/Tipe</label>
+                                                    <input type="text" name="items[${idx}][merk]" class="w-full border-gray-200 rounded px-3 py-2">
+                                                </div>
+                                                <div class="md:col-span-1">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Jml</label>
+                                                    <input type="number" name="items[${idx}][jumlah]" value="1" class="w-20 border-gray-200 rounded px-3 py-2">
+                                                </div>
+                                                <div class="md:col-span-3">
+                                                    <label class="text-xs text-gray-500 mb-1 block">Harga Satuan (RP)</label>
+                                                    <input type="number" step="0.01" name="items[${idx}][harga_satuan]" value="0" class="w-full border-gray-200 rounded px-3 py-2">
+                                                </div>
+                                            </div>`;
+                                        container.appendChild(el);
+                                        counterReprocess++;
+                                        computeEstimatedTotalReprocess();
+                                    }
+                                    function removeRowReprocess(id){
+                                        const el = document.getElementById('item-reprocess-' + id);
+                                        if(el) el.remove();
+                                        reorderNumbersReprocess();
+                                        computeEstimatedTotalReprocess();
+                                    }
+                                    function reorderNumbersReprocess(){
+                                        const cards = document.querySelectorAll('.item-card-reprocess');
+                                        cards.forEach((card, idx) => {
+                                            const title = card.querySelector('.item-number-reprocess');
+                                            if(title) title.innerText = 'Pengajuan Barang #' + (idx + 1);
+                                        });
+                                        counterReprocess = cards.length;
+                                    }
+                                    function computeEstimatedTotalReprocess(){
+                                        let total = 0;
+                                        document.querySelectorAll('#item-list-reprocess [name$="[jumlah]"]').forEach(function(qEl){
+                                            const attr = qEl.getAttribute('name');
+                                            const idxMatch = attr.match(/items\[(\d+)\]\[jumlah\]/);
+                                            if(!idxMatch) return;
+                                            const idx = idxMatch[1];
+                                            const unitEl = document.querySelector(`#item-list-reprocess [name="items[${idx}][harga_satuan]"]`);
+                                            const qty = parseFloat(qEl.value) || 0;
+                                            const unit = unitEl ? parseFloat(unitEl.value) || 0 : 0;
+                                            total += qty * unit;
+                                        });
+                                        const totalInput = document.getElementById('procurementEstimateReprocess');
+                                        if(totalInput){
+                                            totalInput.value = total > 0 ? total.toFixed(2) : '';
+                                        }
+                                    }
+                                    document.addEventListener('input', function(e){
+                                        if(!e.target) return;
+                                        const name = e.target.getAttribute('name') || '';
+                                        if(e.target.closest('#item-list-reprocess') && (name.endsWith('[jumlah]') || name.endsWith('[harga_satuan]'))){
+                                            computeEstimatedTotalReprocess();
+                                        }
+                                    });
+                                    reorderNumbersReprocess();
+                                    computeEstimatedTotalReprocess();
+                                </script>
+                            </div>
+                        </form>
+                    </div>
+                    @endif
                 @endif
             </div>
 
@@ -459,7 +615,7 @@
                 @php
                     $showAppAction = ($project->status === 'submitted_to_management');
                     $showProcAction = ($project->needs_procurement && 
-                                      ($project->procurement_approval_status === 'pending' || is_null($project->procurement_approval_status)));
+                                      in_array($project->procurement_approval_status, ['pending', 'submitted_to_management', null]));
                 @endphp
 
                 @if($showAppAction || $showProcAction)
