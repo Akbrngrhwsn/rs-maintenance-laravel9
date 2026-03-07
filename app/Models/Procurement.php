@@ -6,7 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class Procurement extends Model
 {
-    protected $fillable = ['report_id', 'items', 'status', 'director_note', 'qr_kepala_ruang', 'qr_management', 'qr_bendahara', 'qr_direktur'];
+    protected $fillable = [
+    'report_id', 
+    'app_request_id',
+    'items', 
+    'total',
+    'status', 
+    'director_note', 
+    'qr_kepala_ruang', 
+    'qr_management', 
+    'qr_bendahara', 
+    'qr_direktur'];
 
     // Mengubah JSON 'items' menjadi array
     protected $casts = [
