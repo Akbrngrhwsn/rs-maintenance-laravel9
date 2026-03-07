@@ -411,7 +411,7 @@ class AppRequestController extends Controller
         return back()->with('success', 'Status review admin diperbarui.');
     }
 
-    // Admin IT processing step: input procurement estimate (if needed) and forward to Management or reject
+    // Admin IT processing step: input procurement estimate (if needed/added) and forward to Management or reject
     public function adminProcess(Request $request, $id)
     {
         if(Auth::user()->role !== 'admin') abort(403);
@@ -425,104 +425,107 @@ class AppRequestController extends Controller
             return back()->with('success', 'Pengajuan ditolak oleh Admin IT.');
         }
 
-        // action == forward
-
-        // If needs_procurement, allow admin to provide procurement_estimate and edit items
-        if($app->needs_procurement) {
-            // Accept structured requested_items from admin OR procurement-style `items`:
-            // - `requested_items` => array of numeric-indexed items with english keys (name, brand, qty, unit_price, description)
-            // - `items` => procurement-style items indexed by number with Indonesian keys (nama, merk, jumlah, harga_satuan, deskripsi)
-            $raw = $request->input('requested_items', []);
-            $items = [];
-
-            // If the admin submitted procurement-style `items[...]` (from procurement form), normalize it
-            if ($request->has('items') && is_array($request->input('items'))) {
-                $procItems = $request->input('items');
-                $raw = [];
-                foreach ($procItems as $pi) {
-                    // Move Indonesian keys into a normalized shape compatible with later logic
+        // --- PROSES BARANG (PENGADAAN) ---
+        
+        $raw = [];
+        // Cek jika admin mengirimkan array "items" (dari form pengadaan)
+        if ($request->has('items') && is_array($request->input('items'))) {
+            $procItems = $request->input('items');
+            foreach ($procItems as $pi) {
+                $name = trim($pi['nama'] ?? $pi['name'] ?? '');
+                // Hanya masukkan barang yang ada namanya
+                if ($name !== '') {
                     $raw[] = [
-                        'nama' => $pi['nama'] ?? ($pi['name'] ?? ''),
-                        'merk' => $pi['merk'] ?? ($pi['brand'] ?? ''),
-                        'jumlah' => $pi['jumlah'] ?? ($pi['qty'] ?? 0),
-                        'harga_satuan' => $pi['harga_satuan'] ?? ($pi['unit_price'] ?? ($pi['harga'] ?? 0)),
-                        'keterangan' => $pi['deskripsi'] ?? ($pi['description'] ?? ''),
-                    ];
-                }
-            }
-            $total = 0;
-            if (is_array($raw)) {
-                foreach ($raw as $it) {
-                    $name = trim($it['name'] ?? $it['nama'] ?? '');
-                    if ($name === '') continue;
-
-                    // Normalize quantity (accept 'qty' or 'jumlah', various formats)
-                    $qtyRaw = $it['qty'] ?? $it['jumlah'] ?? 0;
-                    $qty = 0;
-                    if (is_numeric($qtyRaw)) {
-                        $qty = intval($qtyRaw);
-                    } elseif (is_string($qtyRaw)) {
-                        $clean = preg_replace('/[^0-9,.-]/', '', $qtyRaw);
-                        $clean = str_replace(',', '.', $clean);
-                        $qty = intval(floatval($clean));
-                    }
-
-                    // Normalize unit price (accept 'harga_satuan', 'unit_price', 'harga')
-                    $hargaRaw = $it['harga_satuan'] ?? $it['unit_price'] ?? $it['harga'] ?? 0;
-                    $harga = 0.0;
-                    if ($hargaRaw !== null && $hargaRaw !== '') {
-                        if (is_numeric($hargaRaw)) {
-                            $harga = floatval($hargaRaw);
-                        } elseif (is_string($hargaRaw)) {
-                            $clean = preg_replace('/[^0-9,.-]/', '', $hargaRaw);
-                            $clean = str_replace(',', '.', $clean);
-                            $harga = floatval($clean);
-                        }
-                    }
-
-                    $lineTotal = $qty * $harga;
-                    if ($lineTotal > 0) {
-                        $total += $lineTotal;
-                    }
-
-                    // Store both English and Indonesian keys for compatibility with other parts of the app
-                    $items[] = [
-                        // Indonesian keys (primary for procurement views)
                         'nama' => $name,
-                        'merk' => trim($it['brand'] ?? $it['merk'] ?? ''),
-                        'jumlah' => $qty,
-                        'harga_satuan' => $harga,
-                        'keterangan' => trim($it['description'] ?? $it['keterangan'] ?? ''),
-                        // English keys (keep for older records / backward compatibility)
+                        'merk' => trim($pi['merk'] ?? $pi['brand'] ?? ''),
+                        'jumlah' => $pi['jumlah'] ?? $pi['qty'] ?? 1,
+                        'harga_satuan' => $pi['harga_satuan'] ?? $pi['unit_price'] ?? $pi['harga'] ?? 0,
+                        'keterangan' => trim($pi['deskripsi'] ?? $pi['description'] ?? ''),
+                        
+                        // English keys untuk backward compatibility
                         'name' => $name,
-                        'brand' => trim($it['brand'] ?? $it['merk'] ?? ''),
-                        'qty' => $qty,
-                        'unit_price' => $harga,
-                        'description' => trim($it['description'] ?? $it['keterangan'] ?? '')
+                        'brand' => trim($pi['merk'] ?? $pi['brand'] ?? ''),
+                        'qty' => $pi['jumlah'] ?? $pi['qty'] ?? 1,
+                        'unit_price' => $pi['harga_satuan'] ?? $pi['unit_price'] ?? $pi['harga'] ?? 0,
+                        'description' => trim($pi['deskripsi'] ?? $pi['description'] ?? '')
                     ];
-                }
-            }
-
-            // Only set requested_items if the column exists in DB to avoid SQL errors
-            if (\Illuminate\Support\Facades\Schema::hasColumn('app_requests', 'requested_items')) {
-                $app->requested_items = $items ?: null;
-            }
-
-            // Use computed total if available, otherwise fall back to provided estimate
-            if ($total > 0) {
-                $app->procurement_estimate = $total;
-            } else {
-                if ($request->filled('procurement_estimate')) {
-                    $app->procurement_estimate = $request->procurement_estimate;
                 }
             }
         } else {
-            if ($request->filled('procurement_estimate')) {
-                $app->procurement_estimate = $request->procurement_estimate;
+            // Jika tidak ada "items", coba ambil dari "requested_items" (jika sebelumnya kepala ruang yang isi)
+            $raw = $request->input('requested_items', []);
+        }
+
+        $total = 0;
+        $cleanedItems = [];
+
+        if (is_array($raw) && count($raw) > 0) {
+            foreach ($raw as $it) {
+                // Konversi dan bersihkan angka
+                $qtyRaw = $it['jumlah'];
+                $qty = is_numeric($qtyRaw) ? intval($qtyRaw) : intval(floatval(str_replace(',', '.', preg_replace('/[^0-9,.-]/', '', $qtyRaw))));
+
+                $hargaRaw = $it['harga_satuan'];
+                $harga = is_numeric($hargaRaw) ? floatval($hargaRaw) : floatval(str_replace(',', '.', preg_replace('/[^0-9,.-]/', '', $hargaRaw)));
+
+                $lineTotal = $qty * $harga;
+                if ($lineTotal > 0) {
+                    $total += $lineTotal;
+                }
+
+                $it['jumlah'] = $qty;
+                $it['qty'] = $qty;
+                $it['harga_satuan'] = $harga;
+                $it['unit_price'] = $harga;
+                $cleanedItems[] = $it;
             }
         }
 
-        // Forward to Management for approval
+        // =========================================================
+        // KUNCI PERBAIKAN: KARENA MODEL SUDAH CAST ARRAY, JANGAN GUNAKAN JSON_ENCODE
+        // =========================================================
+        if (count($cleanedItems) > 0) {
+            $app->needs_procurement = 1; 
+            
+            if (\Illuminate\Support\Facades\Schema::hasColumn('app_requests', 'requested_items')) {
+                // Langsung masukkan array $cleanedItems, Laravel akan otomatis menjadikannya JSON
+                $app->requested_items = $cleanedItems; 
+            }
+            
+            $app->procurement_estimate = $total > 0 ? $total : ($request->procurement_estimate ?? 0);
+            $app->procurement_approval_status = 'submitted_to_management';
+            
+            // Simpan ke tabel Procurements Universal
+            // Jika model Procurement juga pakai protected $casts = ['items' => 'array'],
+            // hapus json_encode di sini juga.
+            \App\Models\Procurement::updateOrCreate(
+                ['app_request_id' => $app->id],
+                [
+                    'status' => 'submitted_to_management',
+                    // Gunakan json_encode HANYA JIKA model Procurement TIDAK menggunakan cast array
+                    // 'items' => json_encode($cleanedItems), 
+                    
+                    // REKOMENDASI: Jika model Procurement pakai cast array, gunakan ini:
+                    'items' => $cleanedItems, 
+                    'total' => $total > 0 ? $total : ($request->procurement_estimate ?? 0)
+                ]
+            );
+        } else {
+            // Jika benar-benar kosong dan tidak butuh pengadaan
+            // (Hanya ambil angka estimasi manual jika ada dan bukan dari daftar barang)
+            if ($request->filled('procurement_estimate') && $request->procurement_estimate > 0) {
+                 $app->needs_procurement = 1;
+                 $app->procurement_estimate = $request->procurement_estimate;
+                 $app->procurement_approval_status = 'submitted_to_management';
+            }
+        }
+
+        // Catatan umum admin
+        if ($request->filled('catatan_admin')) {
+            $app->catatan_admin = $request->catatan_admin;
+        }
+
+        // Teruskan status APLIKASI ke Management
         $app->status = 'submitted_to_management';
         $app->save();
 
@@ -944,4 +947,5 @@ public function reprocessProcurement(Request $request, $id)
 
         return back()->with('error', 'Pengadaan ditolak dan dikembalikan ke Admin IT untuk direvisi.');
     }
+
 }

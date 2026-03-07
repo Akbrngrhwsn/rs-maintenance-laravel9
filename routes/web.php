@@ -33,6 +33,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/management/app/{id}/procurement/approve', [AppRequestController::class, 'managementApproveProcurementForApp'])->name('management.app.procurement.approve');
     Route::patch('/management/app/{id}/procurement/reject', [AppRequestController::class, 'managementRejectProcurementForApp'])->name('management.app.procurement.reject');
     
+    // Route untuk membuat pengadaan susulan oleh Admin
+Route::post('/admin/apps/{id}/add-procurement', [\App\Http\Controllers\AppRequestController::class, 'addProcurement'])->name('admin.apps.add_procurement');
+
     Route::get('/management/reports', [AppRequestController::class, 'managementReports'])->name('management.reports');
     
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
