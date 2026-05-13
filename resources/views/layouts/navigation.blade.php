@@ -2,9 +2,45 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
             <div class="flex">
+                {{-- === SWITCHER IPSRS / IT === --}}
+                <div class="hidden sm:flex items-center pr-4">
+                    <a href="https://rs-maintenance-ipsrs.pku-jatinom.com/"
+                    class="group flex items-center gap-3 px-4 py-2 rounded-full 
+                            bg-gray-100 hover:bg-blue-50 
+                            border border-gray-200 hover:border-blue-200
+                            shadow-sm hover:shadow-md
+                            transition-all duration-300">
+
+                        <div class="flex flex-col text-right leading-tight">
+                            <span class="text-[9px] font-semibold tracking-wide text-gray-400 uppercase">
+                                Switch to
+                            </span>
+                            <span class="text-[12px] font-bold text-blue-600">
+                                Maintenance IT
+                            </span>
+                        </div>
+
+                        <div class="flex items-center justify-center w-8 h-8 rounded-full 
+                                    bg-white shadow-sm 
+                                    group-hover:rotate-12 transition-transform duration-300">
+                            <svg class="w-4 h-4 text-blue-500"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Logo -->
                 <div class="shrink-0 flex items-center">
-                    <a href="{{ url('/') }}" class="transition-transform hover:scale-105 duration-200">
-                        <x-application-logo class="block h-9 w-auto fill-current text-blue-900" />
+                    <a href="{{ url('/') }}"
+                    class="transition-transform duration-200 hover:scale-105">
+                        <x-application-logo class="block h-9 w-auto fill-current text-green-900" />
                     </a>
                 </div>
 
@@ -258,6 +294,25 @@
 {{-- MOBILE MENU --}}
 <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden bg-white border-t border-gray-100">
     <div class="pt-2 pb-3 space-y-1 px-2">
+        {{-- TOMBOL SWITCH: MAINTENANCE IT (Akses Cepat) --}}
+        <div class="px-2 mb-4 mt-2">
+            <a href="https://rs-maintenance.pku-jatinom.com/" class="flex items-center justify-between p-3 rounded-xl bg-blue-50 border border-blue-100 shadow-sm active:scale-95 transition-transform duration-200">
+                <div class="flex items-center gap-3">
+                    <div class="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest leading-none mb-1">Pindah Layanan</p>
+                        <p class="text-[14px] font-bold text-blue-700 leading-none">Maintenance IT</p>
+                    </div>
+                </div>
+                <svg class="w-5 h-5 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+            </a>
+        </div>
         @if(Auth::check())
             <x-responsive-nav-link :href="route('meetings.index')" :active="request()->routeIs('meetings.*')" class="rounded-lg font-bold text-[13px]">{{ __('Rapat') }}</x-responsive-nav-link>
             

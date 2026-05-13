@@ -7,6 +7,7 @@ use App\Models\Report;
 use Illuminate\Http\Request;
 use Carbon\Carbon; 
 use App\Models\Procurement;
+use App\Models\NewItemRequest;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Support\Facades\Auth; // Tambahan: Import Auth untuk ambil nama user
 use App\Models\AppRequest;
@@ -297,7 +298,7 @@ class AdminReportController extends Controller
     $start = $carbon->copy()->startOfMonth()->startOfDay();
     $end = $carbon->copy()->endOfMonth()->endOfDay();
 
-    // 3. Ambil Data dari Kedua Sumber
+    // 3. Ambil Data dari Ketiga Sumber
     // Data Pengadaan Kerusakan (Maintenance)
     $procurements = Procurement::with(['report'])
         ->whereBetween('created_at', [$start, $end])
@@ -308,6 +309,11 @@ class AdminReportController extends Controller
         ->whereBetween('created_at', [$start, $end])
         ->get();
 
+    // Data Pengadaan Barang Baru (New Item Requests)
+    $newItemRequests = NewItemRequest::with(['user', 'room'])
+        ->whereBetween('created_at', [$start, $end])
+        ->get();
+
     $monthLabel = $carbon->locale('id')->isoFormat('MMMM Y');
 
     // 4. LOGIKA QR CODE
@@ -315,7 +321,7 @@ class AdminReportController extends Controller
     $waktuValidasi = \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y, HH:mm') . ' WIB';
     
     // Gabungkan info jumlah data di QR Code
-    $totalData = $procurements->count() + $app_requests->count();
+    $totalData = $procurements->count() + $app_requests->count() + $newItemRequests->count();
     $qrString = "Laporan Pengadaan Bulanan periode {$monthLabel}. Total: {$totalData} data. Divalidasi oleh {$validator} pada {$waktuValidasi}";
 
     $qrCode = base64_encode(
@@ -328,10 +334,11 @@ class AdminReportController extends Controller
     $qrMime = 'image/svg+xml';
     $qrIsSvg = true;
 
-    // 5. Kirim ke View (Tambahkan appProcurements ke compact)
+    // 5. Kirim ke View
     $pdf = Pdf::loadView('pdf.procurements_monthly', compact(
         'procurements', 
-        'app_requests', // <--- Tambahkan data pengadaan aplikasi
+        'app_requests',
+        'newItemRequests',
         'monthLabel', 
         'qrCode', 
         'validator', 
