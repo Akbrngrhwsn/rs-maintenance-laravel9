@@ -2,47 +2,45 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
             <div class="flex">
-                {{-- === SWITCHER IPSRS / IT === --}}
-                <div class="hidden sm:flex items-center pr-4">
-                    <a href="https://rs-maintenance-ipsrs.pku-jatinom.com/"
-                    class="group flex items-center gap-3 px-4 py-2 rounded-full 
-                            bg-gray-100 hover:bg-blue-50 
-                            border border-gray-200 hover:border-blue-200
-                            shadow-sm hover:shadow-md
-                            transition-all duration-300">
+             {{-- === SWITCHER IPSRS / IT === --}}
+            <div class="hidden sm:flex items-center pr-3">
+                <a href="https://rs-maintenance.pku-jatinom.com/"
+                class="group flex items-center gap-2 px-3 py-1.5 rounded-full 
+                        bg-gray-50 hover:bg-blue-50 
+                        border border-gray-200 hover:border-blue-100
+                        transition-all duration-300">
 
-                        <div class="flex flex-col text-right leading-tight">
-                            <span class="text-[9px] font-semibold tracking-wide text-gray-400 uppercase">
-                                Switch to
-                            </span>
-                            <span class="text-[12px] font-bold text-blue-600">
-                                Maintenance IT
-                            </span>
-                        </div>
+                    <div class="flex flex-col text-right leading-none">
+                        <span class="text-[8px] font-bold tracking-tight text-gray-400 uppercase">
+                            Switch
+                        </span>
+                        <span class="text-[10px] font-extrabold text-blue-600">
+                            IT
+                        </span>
+                    </div>
 
-                        <div class="flex items-center justify-center w-8 h-8 rounded-full 
-                                    bg-white shadow-sm 
-                                    group-hover:rotate-12 transition-transform duration-300">
-                            <svg class="w-4 h-4 text-blue-500"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                        </div>
-                    </a>
-                </div>
+                    <div class="flex items-center justify-center w-6 h-6 rounded-full 
+                                bg-white shadow-sm border border-gray-100
+                                group-hover:rotate-12 transition-transform duration-300">
+                        <svg class="w-3 h-3 text-blue-500"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2.5"
+                                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                </a>
+            </div>
 
-                <!-- Logo -->
-                <div class="shrink-0 flex items-center">
-                    <a href="{{ url('/') }}"
-                    class="transition-transform duration-200 hover:scale-105">
-                        <x-application-logo class="block h-9 w-auto fill-current text-green-900" />
-                    </a>
-                </div>
+            <div class="shrink-0 flex items-center">
+                <a href="{{ url('/') }}"
+                class="transition-transform duration-200 hover:scale-105">
+                    <x-application-logo class="block h-8 w-auto fill-current text-green-900" />
+                </a>
+            </div>
 
                 <div class="hidden space-x-2 lg:space-x-4 sm:-my-px sm:ms-8 sm:flex items-center">
                     
