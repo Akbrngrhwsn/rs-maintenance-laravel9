@@ -12,24 +12,24 @@
 
                     <div class="flex flex-col text-right leading-none">
                         <span class="text-[8px] font-bold tracking-tight text-gray-400 uppercase">
-                            Switch
+                            Pindah ke
                         </span>
-                        <span class="text-[10px] font-extrabold text-blue-600">
-                            IT
+                        <span class="text-[10px] font-extrabold text-green-600">
+                            IPS RS
                         </span>
                     </div>
 
                     <div class="flex items-center justify-center w-6 h-6 rounded-full 
                                 bg-white shadow-sm border border-gray-100
                                 group-hover:rotate-12 transition-transform duration-300">
-                        <svg class="w-3 h-3 text-blue-500"
+                        <svg class="w-3 h-3 text-green-500"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round"
                                 stroke-linejoin="round"
                                 stroke-width="2.5"
-                                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-7h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                         </svg>
                     </div>
                 </a>
@@ -294,19 +294,19 @@
     <div class="pt-2 pb-3 space-y-1 px-2">
         {{-- TOMBOL SWITCH: MAINTENANCE IT (Akses Cepat) --}}
         <div class="px-2 mb-4 mt-2">
-            <a href="https://rs-maintenance-ipsrs.pku-jatinom.com/" class="flex items-center justify-between p-3 rounded-xl bg-blue-50 border border-blue-100 shadow-sm active:scale-95 transition-transform duration-200">
+            <a href="https://rs-maintenance-ipsrs.pku-jatinom.com/" class="flex items-center justify-between p-3 rounded-xl bg-green-50 border border-green-100 shadow-sm active:scale-95 transition-transform duration-200">
                 <div class="flex items-center gap-3">
-                    <div class="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm">
+                    <div class="h-10 w-10 rounded-lg bg-green-600 flex items-center justify-center text-white shadow-sm">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-7h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                         </svg>
                     </div>
                     <div>
-                        <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest leading-none mb-1">Pindah Layanan</p>
-                        <p class="text-[14px] font-bold text-blue-700 leading-none">Maintenance IT</p>
+                        <p class="text-[10px] font-bold text-green-400 uppercase tracking-widest leading-none mb-1">Pindah Layanan</p>
+                        <p class="text-[14px] font-bold text-green-700 leading-none">Maintenance IPS RS</p>
                     </div>
                 </div>
-                <svg class="w-5 h-5 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
             </a>
