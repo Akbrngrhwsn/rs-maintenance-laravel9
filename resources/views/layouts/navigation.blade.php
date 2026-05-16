@@ -4,7 +4,7 @@
             <div class="flex">
              {{-- === SWITCHER IPSRS / IT === --}}
             <div class="hidden sm:flex items-center pr-3">
-                <a href="https://rs-maintenance.pku-jatinom.com/"
+                <a href="https://rs-maintenance-ipsrs.pku-jatinom.com/"
                 class="group flex items-center gap-2 px-3 py-1.5 rounded-full 
                         bg-gray-50 hover:bg-blue-50 
                         border border-gray-200 hover:border-blue-100
@@ -294,7 +294,7 @@
     <div class="pt-2 pb-3 space-y-1 px-2">
         {{-- TOMBOL SWITCH: MAINTENANCE IT (Akses Cepat) --}}
         <div class="px-2 mb-4 mt-2">
-            <a href="https://rs-maintenance.pku-jatinom.com/" class="flex items-center justify-between p-3 rounded-xl bg-blue-50 border border-blue-100 shadow-sm active:scale-95 transition-transform duration-200">
+            <a href="https://rs-maintenance-ipsrs.pku-jatinom.com/" class="flex items-center justify-between p-3 rounded-xl bg-blue-50 border border-blue-100 shadow-sm active:scale-95 transition-transform duration-200">
                 <div class="flex items-center gap-3">
                     <div class="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

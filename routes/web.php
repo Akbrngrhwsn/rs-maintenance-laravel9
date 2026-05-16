@@ -15,11 +15,22 @@ use App\Http\Controllers\ITNoteController;
 use App\Http\Controllers\NewItemRequestController;
 use App\Http\Controllers\UserRequestController;
 
-// === USER 1: PUBLIC (Tanpa Login) ===
-Route::get('/', [PublicReportController::class, 'index'])->name('public.home');
-Route::post('/lapor', [PublicReportController::class, 'store'])->name('public.store');
-Route::get('/tracking', [PublicReportController::class, 'tracking'])->name('public.tracking');
+// === PORTAL UTAMA (Akses Awal Tanpa Login) ===
+Route::get('/', function () {
+    // Jika user sudah login, langsung arahkan ke dashboard
+    if (\Illuminate\Support\Facades\Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+    // Jika belum login, tampilkan halaman pilihan portal
+    return view('portal');
+})->name('portal');
 
+// === USER 1: PUBLIC IT MAINTENANCE (Tanpa Login) ===
+Route::prefix('it-maintenance')->group(function () {
+    Route::get('/', [PublicReportController::class, 'index'])->name('public.home');
+    Route::post('/lapor', [PublicReportController::class, 'store'])->name('public.store');
+    Route::get('/tracking', [PublicReportController::class, 'tracking'])->name('public.tracking');
+});
 // === GROUP AUTHENTICATED (Harus Login) ===
 Route::middleware('auth')->group(function () {
 
